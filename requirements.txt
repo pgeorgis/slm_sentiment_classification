@@ -1,2 +1,4 @@
 huggingface-hub
 llama-cpp-python
+pandas
+scikit-learn

@@ -13,17 +13,15 @@ logger = logging.getLogger(__name__)
 class Prompt:
     """Initialize Prompt class."""
 
-    def __init__(self, template: Union[Callable, str], system_message: str, prompt_id: str = "", prompt_outfile=None, **kwargs):
+    def __init__(self, template: Union[Callable, str], system_message: str, prompt_id: str = ""):
         """Initialize Prompt instance."""
         self.prompt_id = prompt_id if prompt_id else str(uuid.uuid4())
         self.template = template
         self.system_message = system_message
-        self.prompt = self.generate_prompt(**kwargs)
-        if prompt_outfile:
-            self.log_prompt(prompt_outfile)
+        self.prompt = None
         self.responses = []
 
-    def generate_prompt(self, **kwargs):
+    def generate_prompt(self, prompt_outfile=None, **kwargs):
         """Generate prompt from system message and template."""
         if isinstance(self.template, str):
             user_msg_content = self.template
@@ -41,7 +39,10 @@ class Prompt:
                 "content": user_msg_content
             }
         ]
-        return messages
+        self.prompt = messages
+        if prompt_outfile:
+            self.log_prompt(prompt_outfile)
+        return self.prompt
 
     def save_response(self, response):
         """Save an SLM response to the prompt."""
