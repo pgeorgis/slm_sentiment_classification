@@ -6,7 +6,7 @@ from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import zeroshot_review_classification, oneshot_review_classification, chain_of_thought_prompt
 from prompts.system_messages import FILM_REVIEW_CLASSIFIER
 from query_slm import Prompt, query_slm
-from slm_models import llm_qwen_05B, llm_qwen_15B
+from slm_models import qwen_05B, qwen_15B
 
 from llama_cpp import Llama
 
@@ -51,9 +51,9 @@ imdb_sample = sample_from_imdb(imdb_data, examples_per_class=100)
 logger.info(f"Drew sample of {len(imdb_sample)} IMDB reviews")
 
 # Test various prompt methods
-for model in [llm_qwen_05B, llm_qwen_15B]:
+for model in [qwen_05B, qwen_15B]:
     for prompt_label, prompt_template in PROMPT_METHODS.items():
-        logger.info(f"Testing prompt method '{prompt_label}' ...")
+        logger.info(f"Testing prompt method '{prompt_label}' with model '{model.name}'...")
         imdb_sample = imdb_sample.copy()
         pred_label = "prediction_" + prompt_label
         imdb_sample[pred_label] = imdb_sample["review"].apply(
