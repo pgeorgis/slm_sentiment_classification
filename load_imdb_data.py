@@ -1,8 +1,9 @@
 """Load and sample IMBD dataset."""
 
+import re
+
 import numpy as np
 import pandas as pd
-import re
 
 RANDOM_SEED = 32
 

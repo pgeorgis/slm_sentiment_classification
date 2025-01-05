@@ -1,8 +1,8 @@
-import logging
 import json
+import logging
 import time
-from typing import Callable, Union
 import uuid
+from typing import Callable, Union
 
 from llama_cpp import Llama
 
@@ -54,18 +54,29 @@ class Prompt:
             json.dump(self.prompt, outf, indent=4)
 
 
-def query_slm(model: Llama, prompt: Prompt, temperature: float=0, **kwargs):
+def query_slm(model: Llama,
+              prompt: Prompt,
+              temperature: float = 0.2,
+              top_p: float = 0.95,
+              top_k: int = 40,
+              **kwargs):
     """Query an SLM model with input messages for chat completion."""
 
     # Extract prompt content
     prompt_content = prompt.prompt
 
     # Query model and time latency
+    model_params = {
+        'temperature': temperature,
+        'top_p': top_p,
+        'top_k': top_k,
+    }
+    model_params.update(kwargs)
+    logger.info(f"Querying {model.name} with prompt '{prompt.prompt_id}' {model_params}")
     start_time = time.time()
     response = model.create_chat_completion(
-        temperature=temperature,
         messages=prompt_content,
-        **kwargs
+        **model_params
     )
     end_time = time.time()
     prompt.save_response(response)
@@ -75,7 +86,8 @@ def query_slm(model: Llama, prompt: Prompt, temperature: float=0, **kwargs):
     logger.info(f"Model latency: {latency} seconds")
 
     # Log token usage
-    logger.info(f"Token usage: {response['usage']}")
+    token_usage = response['usage']
+    logger.info(f"Token usage: {token_usage}")
 
     # Extract response
     response_choice = response["choices"][0]
@@ -85,5 +97,14 @@ def query_slm(model: Llama, prompt: Prompt, temperature: float=0, **kwargs):
     finish_reason = response_choice["finish_reason"]
     if finish_reason != "stop":
         logger.warning(f"Model response finish reason: {finish_reason}")
+        
+    # Add latency, token usage, finish reason to model details dict
+    # together with model params, prompt ID, and model name
+    details = model_params.copy()
+    details["model"] = model.name
+    details["prompt"] = prompt.prompt_id
+    details["latency"] = latency
+    details["usage"] = token_usage
+    details["finish_reason"] = finish_reason
 
-    return response_content
+    return response_content, details

@@ -35,14 +35,19 @@ PROMPT_METHODS = {
 def classify_imdb_review(review_text: str,
                          model: Llama,
                          prompt_template: Prompt,
-                         system_message: str=FILM_REVIEW_CLASSIFIER):
+                         prompt_label: str = None,
+                         system_message: str = FILM_REVIEW_CLASSIFIER,
+                         model_params: dict = None):
     """Classify an IMDB review as a 'positive' or 'negative' review."""
     prompt = Prompt(
         prompt_template,
         system_message=system_message,
+        prompt_id=prompt_label,
     )
     prompt.generate_prompt(review_text=review_text)
-    prediction = query_slm(model, prompt)
+    if not model_params:
+        model_params = {}
+    prediction, _ = query_slm(model, prompt, **model_params)
     prediction = prediction.strip().lower()
     match_prediction = VALID_REVIEW_REGEX.search(prediction)
     if not match_prediction:
@@ -54,7 +59,11 @@ def classify_imdb_review(review_text: str,
     return prediction
 
 
-def test_prompt(test_data: pd.DataFrame, prompt_template: Union[Callable, str], prompt_label: str, model: Llama):
+def test_prompt(test_data: pd.DataFrame,
+                prompt_template: Union[Callable, str],
+                prompt_label: str,
+                model: Llama,
+                model_params: dict = None):
     """Test a film review classification prompt on IMDB data subset."""
     logger.info(f"Testing prompt '{prompt_label}' with model '{model.name}'...")
     test_data = test_data.copy()
@@ -63,6 +72,8 @@ def test_prompt(test_data: pd.DataFrame, prompt_template: Union[Callable, str], 
         classify_imdb_review,
         model=model,
         prompt_template=prompt_template,
+        prompt_label=prompt_label,
+        model_params=model_params,
     )
     f1_score = calculate_f1(test_data["label"], test_data[pred_label])
     result_values = []
@@ -74,7 +85,7 @@ def test_prompt(test_data: pd.DataFrame, prompt_template: Union[Callable, str], 
     return results, f1_score, test_data
 
 
-def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame):
+def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame, model_params: dict = None):
     """Test one or more prompts with one or more models, aggregate results summary into Dataframe."""
     prompt_test_results = []
     for model in models:
@@ -88,6 +99,7 @@ def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame)
                 prompt_template=prompt_template,
                 prompt_label=prompt_label,
                 model=model,
+                model_params=model_params,
             )
             results_entry.update(results)
             for result in {"TP", "FP", "TN", "FN"}:

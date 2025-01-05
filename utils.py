@@ -3,6 +3,7 @@
 import datetime
 import subprocess
 
+
 def get_git_commit_hash():
     """Get latest git commit hash of current repository."""
     try:
