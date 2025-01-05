@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from statistics import mean
 from typing import Callable, Union
 
 import pandas as pd
@@ -47,7 +48,7 @@ def classify_imdb_review(review_text: str,
     prompt.generate_prompt(review_text=review_text)
     if not model_params:
         model_params = {}
-    prediction, _ = query_slm(model, prompt, **model_params)
+    prediction, details = query_slm(model, prompt, **model_params)
     prediction = prediction.strip().lower()
     match_prediction = VALID_REVIEW_REGEX.search(prediction)
     if not match_prediction:
@@ -56,7 +57,7 @@ def classify_imdb_review(review_text: str,
     else:
         prediction = match_prediction.group()
     prediction = BINARY_LABEL_MAP.get(prediction, prediction)
-    return prediction
+    return prediction, details
 
 
 def test_prompt(test_data: pd.DataFrame,
@@ -68,21 +69,26 @@ def test_prompt(test_data: pd.DataFrame,
     logger.info(f"Testing prompt '{prompt_label}' with model '{model.name}'...")
     test_data = test_data.copy()
     pred_label = "prediction_" + prompt_label
-    test_data[pred_label] = test_data["review"].apply(
-        classify_imdb_review,
-        model=model,
-        prompt_template=prompt_template,
-        prompt_label=prompt_label,
-        model_params=model_params,
-    )
-    f1_score = calculate_f1(test_data["label"], test_data[pred_label])
     result_values = []
+    call_details = []
+    predictions = []
     for _, row in test_data.iterrows():
-        result_values.append(binary_eval(row["label"], row[pred_label]))
+        prediction, details = classify_imdb_review(
+            review_text=row["review"],
+            model=model,
+            prompt_template=prompt_template,
+            prompt_label=prompt_label,
+            model_params=model_params,
+        )
+        predictions.append(prediction)
+        call_details.append(details)
+        result_values.append(binary_eval(row["label"], prediction))
+    test_data[pred_label] = predictions
+    f1_score = calculate_f1(test_data["label"], test_data[pred_label])
     result_label = "result_" + prompt_label
     test_data[result_label] = result_values
     results = test_data[result_label].value_counts().to_dict()
-    return results, f1_score, test_data
+    return results, f1_score, call_details, test_data
 
 
 def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame, model_params: dict = None):
@@ -94,18 +100,30 @@ def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame,
                 "model": model.name,
                 "prompt": prompt_label,
             }
-            results, f1_score, test_data = test_prompt(
+            results, f1_score, call_details, test_data = test_prompt(
                 test_data=test_data,
                 prompt_template=prompt_template,
                 prompt_label=prompt_label,
                 model=model,
                 model_params=model_params,
             )
+            results_entry["F1"] = f1_score
             results_entry.update(results)
             for result in {"TP", "FP", "TN", "FN"}:
                 if result not in results_entry:
                     results_entry[result] = 0
-            results_entry["F1"] = f1_score
+            # Add model parameters, minimally: temperature, top_p, top_k
+            for param in {"temperature", "top_p", "top_k"}:
+                results_entry[param] = call_details[0][param]
+            if model_params:
+                for key, value in model_params:
+                    if key not in results_entry:
+                        results_entry[key] = value
+            # Take average of latency and token usage
+            results_entry["latency"] = mean([call_detail["latency"] for call_detail in call_details])
+            results_entry["prompt_tokens"] = mean([call_detail["usage"]["prompt_tokens"] for call_detail in call_details])
+            results_entry["completion_tokens"] = mean([call_detail["usage"]["completion_tokens"] for call_detail in call_details])
+            results_entry["total_tokens"] = mean([call_detail["usage"]["total_tokens"] for call_detail in call_details])
             prompt_test_results.append(results_entry)
     prompt_test_results = pd.DataFrame(prompt_test_results)
     return prompt_test_results, test_data
