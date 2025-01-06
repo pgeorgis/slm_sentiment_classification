@@ -116,7 +116,7 @@ def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame,
             for param in {"temperature", "top_p", "top_k"}:
                 results_entry[param] = call_details[0][param]
             if model_params:
-                for key, value in model_params:
+                for key, value in model_params.items():
                     if key not in results_entry:
                         results_entry[key] = value
             # Take average of latency and token usage
