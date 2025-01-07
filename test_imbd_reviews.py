@@ -37,6 +37,8 @@ PROMPT_METHODS = {
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
 
+DEFAULT_MODELS = [qwen_05B, qwen_15B]
+
 
 def create_run_outdir():
     """Create an outdir for a single test run."""
@@ -130,7 +132,7 @@ def test_prompt(test_data: pd.DataFrame,
         result_values.append(binary_eval(row["label"], prediction))
     test_data[pred_label] = predictions
     f1_score = calculate_f1(test_data["label"], test_data[pred_label])
-    result_label = "result_" + prompt_label
+    result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
     results = test_data[result_label].value_counts().to_dict()
     return results, f1_score, call_details, test_data
@@ -198,7 +200,7 @@ if __name__ == "__main__":
     # Test various prompt methods with both Qwen models
     prompt_test_results, imdb_sample = test_prompts_on_models(
         prompts=PROMPT_METHODS,
-        models=[qwen_05B, qwen_15B],
+        models=DEFAULT_MODELS,
         test_data=imdb_sample,
         model_params={
             "temperature": 0,
@@ -211,17 +213,18 @@ if __name__ == "__main__":
     save_test_results(prompt_test_results, imdb_sample, run_outdir)
 
     # Visualize results
-    for prompt_label in PROMPT_METHODS:
-        plot_outdir = os.path.join(run_outdir, "plots", prompt_label)
-        os.makedirs(plot_outdir, exist_ok=True)
-        result_label = "result_" + prompt_label
-        create_tfpn_histogram_by_wordcount(
-            imdb_sample,
-            result_label,
-            outfile=os.path.join(plot_outdir, "wordcount-histogram.png"),
-        )
-        plot_confusion_matrix(
-            imdb_sample,
-            result_label,
-            outfile=os.path.join(plot_outdir, "confusion-matrix.png"),
-        )
+    for model in DEFAULT_MODELS:
+        for prompt_label in PROMPT_METHODS:
+            plot_outdir = os.path.join(run_outdir, model.name, prompt_label)
+            os.makedirs(plot_outdir, exist_ok=True)
+            result_label = "_".join([model.name, prompt_label])
+            create_tfpn_histogram_by_wordcount(
+                imdb_sample,
+                result_label,
+                outfile=os.path.join(plot_outdir, "wordcount-histogram.png"),
+            )
+            plot_confusion_matrix(
+                imdb_sample,
+                result_label,
+                outfile=os.path.join(plot_outdir, "confusion-matrix.png"),
+            )
