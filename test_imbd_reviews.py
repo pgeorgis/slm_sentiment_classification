@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+from functools import lru_cache
 from statistics import mean
 from typing import Callable, Union
 
@@ -48,6 +49,7 @@ def create_run_outdir():
     return run_outdir
 
 
+@lru_cache(maxsize=None)
 def extract_review_keywords(review_text: str,
                             model: Llama = qwen_15B
                             ):
