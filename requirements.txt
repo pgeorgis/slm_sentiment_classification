@@ -1,4 +1,6 @@
 huggingface-hub
 llama-cpp-python
+matplotlib
 pandas
+seaborn
 scikit-learn

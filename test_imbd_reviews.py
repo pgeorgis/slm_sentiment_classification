@@ -7,14 +7,16 @@ from typing import Callable, Union
 import pandas as pd
 from llama_cpp import Llama
 
-from eval import BINARY_LABEL_MAP, binary_eval, calculate_f1
+from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
+                  create_tfpn_histogram_by_wordcount, plot_confusion_matrix)
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
                                       extract_key_phrases_prompt,
                                       keyword_sentiment_analysis_prompt,
                                       oneshot_review_classification,
                                       zeroshot_review_classification)
-from prompts.system_messages import FILM_REVIEW_CLASSIFIER, FILM_REVIEW_SUMMARIZER
+from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
+                                     FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
 from slm_models import qwen_05B, qwen_15B
 from utils import create_timestamp, get_git_commit_hash
@@ -32,8 +34,17 @@ PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
     "oneshot": oneshot_review_classification,
     "chain-of-thought": chain_of_thought_prompt,
-    "keyword-based sentiment analysis": keyword_sentiment_analysis_prompt,
+    "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
+
+
+def create_run_outdir():
+    """Create an outdir for a single test run."""
+    results_outdir = os.path.abspath("results")
+    run_outdir = os.path.join(results_outdir, f"{START_TIME}_{COMMIT_HASH}")
+    os.makedirs(run_outdir, exist_ok=True)
+    return run_outdir
+
 
 def extract_review_keywords(review_text: str,
                             model: Llama = qwen_15B
@@ -163,30 +174,54 @@ def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame,
     return prompt_test_results, test_data
 
 
-logger.info("Loading IMDB dataset...")
-imdb_data = load_imdb("test")
-logger.info("Sampling from IMDB dataset...")
-imdb_sample = sample_from_imdb(imdb_data, examples_per_class=10)
-logger.info(f"Drew sample of {len(imdb_sample)} IMDB reviews")
+def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_outdir: str):
+    """Save test summary and raw results on sample data to TSV files."""
+    summary_outfile = os.path.join(run_outdir, f"results-summary.tsv")
+    summary_df.to_csv(summary_outfile, sep="\t", index=False)
+    logger.info(f"Wrote test summary to {summary_outfile}")
+    results_outfile = os.path.join(run_outdir, f"imdb-sample-results.tsv")
+    logger.info(f"Wrote test results to {results_outfile}")
+    sample_df.to_csv(results_outfile, sep="\t", index=False)
 
-# Test various prompt methods with both Qwen models
-prompt_test_results, imdb_sample = test_prompts_on_models(
-    prompts=PROMPT_METHODS,
-    models=[qwen_05B, qwen_15B],
-    test_data=imdb_sample,
-    model_params={
-        "temperature": 0,
-        "top_p": 0.99,
-        "top_k": 5,
-    }
-)
 
-# Write test results with today's date/time and commit hash
-outdir = os.path.abspath("results")
-os.makedirs(outdir, exist_ok=True)
-summary_outfile = os.path.join(outdir, f"{START_TIME}_{COMMIT_HASH}_results-summary.tsv")
-prompt_test_results.to_csv(summary_outfile, sep="\t", index=False)
-logger.info(f"Wrote test summary to {summary_outfile}")
-results_outfile = os.path.join(outdir, f"{START_TIME}_{COMMIT_HASH}_imdb-results.tsv")
-logger.info(f"Wrote test results to {results_outfile}")
-imdb_sample.to_csv(results_outfile, sep="\t", index=False)
+if __name__ == "__main__":
+    # Load and sample IMDB data
+    logger.info("Loading IMDB dataset...")
+    imdb_data = load_imdb("test")
+    logger.info("Sampling from IMDB dataset...")
+    imdb_sample = sample_from_imdb(imdb_data, examples_per_class=100)
+    logger.info(f"Drew sample of {len(imdb_sample)} IMDB reviews")
+    
+    # Create run out directory
+    run_outdir = create_run_outdir()
+
+    # Test various prompt methods with both Qwen models
+    prompt_test_results, imdb_sample = test_prompts_on_models(
+        prompts=PROMPT_METHODS,
+        models=[qwen_05B, qwen_15B],
+        test_data=imdb_sample,
+        model_params={
+            "temperature": 0,
+            "top_p": 0.99,
+            "top_k": 5,
+        }
+    )
+
+    # Write test results with today's date/time and commit hash
+    save_test_results(prompt_test_results, imdb_sample, run_outdir)
+
+    # Visualize results
+    for prompt_label in PROMPT_METHODS:
+        plot_outdir = os.path.join(run_outdir, "plots", prompt_label)
+        os.makedirs(plot_outdir, exist_ok=True)
+        result_label = "result_" + prompt_label
+        create_tfpn_histogram_by_wordcount(
+            imdb_sample,
+            result_label,
+            outfile=os.path.join(plot_outdir, "wordcount-histogram.png"),
+        )
+        plot_confusion_matrix(
+            imdb_sample,
+            result_label,
+            outfile=os.path.join(plot_outdir, "confusion-matrix.png"),
+        )
