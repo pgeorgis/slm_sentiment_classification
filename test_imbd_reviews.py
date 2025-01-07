@@ -66,8 +66,8 @@ def classify_imdb_review(review_text: str,
         prompt_id=prompt_label,
     )
     # Check if using keyword-based sentiment analysis; if so, first extract keywords
-    if prompt_template == keyword_sentiment_analysis_prompt:
-        use_keywords = True
+    use_keywords = prompt_template == keyword_sentiment_analysis_prompt
+    if use_keywords:
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
     else:
@@ -184,6 +184,9 @@ prompt_test_results, imdb_sample = test_prompts_on_models(
 # Write test results with today's date/time and commit hash
 outdir = os.path.abspath("results")
 os.makedirs(outdir, exist_ok=True)
-outfile = os.path.join(outdir, f"{START_TIME}_{COMMIT_HASH}_results.tsv")
-prompt_test_results.to_csv(outfile, sep="\t", index=False)
-logger.info(f"Wrote test results to {outfile}")
+summary_outfile = os.path.join(outdir, f"{START_TIME}_{COMMIT_HASH}_results-summary.tsv")
+prompt_test_results.to_csv(summary_outfile, sep="\t", index=False)
+logger.info(f"Wrote test summary to {summary_outfile}")
+results_outfile = os.path.join(outdir, f"{START_TIME}_{COMMIT_HASH}_imdb-results.tsv")
+logger.info(f"Wrote test results to {results_outfile}")
+imdb_sample.to_csv(results_outfile, sep="\t", index=False)
