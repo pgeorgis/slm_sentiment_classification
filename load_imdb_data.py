@@ -46,16 +46,29 @@ def load_imdb(split: str="train"):
     return df
 
 
-def sample_from_imdb(imdb_df: pd.DataFrame, examples_per_class: int=100, length_brackets: int=10):
+def sample_from_imdb(imdb_df: pd.DataFrame, examples_per_class: int=100):
     """Sample equally from IMDB dataset by label and proportionately by text length."""
     # Add indices
     selected_indices = {0: set(), 1: set()}
     imdb_df["index"] = range(len(imdb_df))
+
     # Calculate text lengths and sort into brackets
     imdb_df["wordcount"] = imdb_df["review"].apply(get_wordcount)
-    max_length = imdb_df["wordcount"].max()
-    length_bins = np.linspace(0, max_length, length_brackets + 1)
-    imdb_df["length_bracket"] = pd.cut(imdb_df["wordcount"], bins=length_bins, labels=False, include_lowest=True)
+    wordcounts = imdb_df["wordcount"].to_list()
+    max_length = max(wordcounts)
+    std_length = np.std(wordcounts)
+    length_brackets = int(max_length / std_length)
+    percentiles = np.linspace(0, 1, length_brackets + 1)
+    bin_edges = np.percentile(wordcounts, percentiles * 100)
+    # Ensure bin edges cover the full range of lengths
+    bin_edges[0] = 0
+    bin_edges[-1] = max_length
+    imdb_df["length_bracket"] = pd.cut(
+        imdb_df["wordcount"],
+        bins=bin_edges,
+        labels=False,
+        include_lowest=True
+    )
 
     # Draw N examples from each label/class, proportionate to text length bracket frequencies
     for label in [0, 1]:
