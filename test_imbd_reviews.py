@@ -10,6 +10,7 @@ from llama_cpp import Llama
 from eval import BINARY_LABEL_MAP, binary_eval, calculate_f1
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
+                                      keyword_sentiment_analysis_prompt,
                                       oneshot_review_classification,
                                       zeroshot_review_classification)
 from prompts.system_messages import FILM_REVIEW_CLASSIFIER
@@ -30,6 +31,7 @@ PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
     "oneshot": oneshot_review_classification,
     "chain-of-thought": chain_of_thought_prompt,
+    "keyword-based sentiment analysis": keyword_sentiment_analysis_prompt,
 }
 
 
@@ -140,6 +142,11 @@ prompt_test_results, imdb_sample = test_prompts_on_models(
     prompts=PROMPT_METHODS,
     models=[qwen_05B, qwen_15B],
     test_data=imdb_sample,
+    model_params={
+        "temperature": 0,
+        "top_p": 0.99,
+        "top_k": 5,
+    }
 )
 
 # Write test results with today's date/time and commit hash
