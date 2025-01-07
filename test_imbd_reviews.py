@@ -10,10 +10,11 @@ from llama_cpp import Llama
 from eval import BINARY_LABEL_MAP, binary_eval, calculate_f1
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
+                                      extract_key_phrases_prompt,
                                       keyword_sentiment_analysis_prompt,
                                       oneshot_review_classification,
                                       zeroshot_review_classification)
-from prompts.system_messages import FILM_REVIEW_CLASSIFIER
+from prompts.system_messages import FILM_REVIEW_CLASSIFIER, FILM_REVIEW_SUMMARIZER
 from query_slm import Prompt, query_slm
 from slm_models import qwen_05B, qwen_15B
 from utils import create_timestamp, get_git_commit_hash
@@ -34,6 +35,23 @@ PROMPT_METHODS = {
     "keyword-based sentiment analysis": keyword_sentiment_analysis_prompt,
 }
 
+def extract_review_keywords(review_text: str,
+                            model: Llama = qwen_15B
+                            ):
+    """Extract or retrieve keywords/key phrases from a film review text."""
+    keyword_prompt = Prompt(
+        template=extract_key_phrases_prompt,
+        system_message=FILM_REVIEW_SUMMARIZER,
+        prompt_id="keyword extraction",
+    )
+    keyword_prompt.generate_prompt(review_text=review_text)
+    key_phrases, details = query_slm(
+        model=model,
+        prompt=keyword_prompt,
+        max_tokens=200,
+    )
+    return key_phrases, details
+
 
 def classify_imdb_review(review_text: str,
                          model: Llama,
@@ -47,7 +65,13 @@ def classify_imdb_review(review_text: str,
         system_message=system_message,
         prompt_id=prompt_label,
     )
-    prompt.generate_prompt(review_text=review_text)
+    # Check if using keyword-based sentiment analysis; if so, first extract keywords
+    if prompt_template == keyword_sentiment_analysis_prompt:
+        use_keywords = True
+        key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
+        prompt.generate_prompt(key_phrases=key_phrases)
+    else:
+        prompt.generate_prompt(review_text=review_text)
     if not model_params:
         model_params = {}
     prediction, details = query_slm(model, prompt, **model_params)
@@ -59,6 +83,14 @@ def classify_imdb_review(review_text: str,
     else:
         prediction = match_prediction.group()
     prediction = BINARY_LABEL_MAP.get(prediction, prediction)
+    
+    # If keyword extraction was applied,
+    # add latency and token usage details from that call to overall details
+    if use_keywords:
+        details["latency"] += key_phrases_call_details["latency"]
+        for key in {"prompt_tokens", "completion_tokens", "total_tokens"}:
+            details["usage"][key] += key_phrases_call_details["usage"][key]
+    
     return prediction, details
 
 
