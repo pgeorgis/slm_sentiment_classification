@@ -69,7 +69,7 @@ def sample_from_imdb(imdb_df: pd.DataFrame, examples_per_class: int=100, length_
             bracket_df = label_df[label_df["length_bracket"] == bracket]
 
             # Adjust the number of samples for this bracket, according to its frequency
-            bracket_sample_size = int(examples_per_class * freq)
+            bracket_sample_size = max(int(examples_per_class * freq), 1)
 
             # Sample reviews from this bracket and add their indices to sample_data
             sampled_reviews = bracket_df.sample(n=bracket_sample_size, replace=False, random_state=RANDOM_SEED)
