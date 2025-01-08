@@ -57,7 +57,7 @@ def chain_of_thought_prompt(review_text: str):
 
 def extract_key_phrases_prompt(review_text: str):
     """Constructs a prompt to extract key words and phrases from a film review."""
-    prompt = f"""Read the following film review and identify any keywords or key phrases which reveal the author's attitude toward the film.
+    prompt = f"""Carefully read the following film review and identify any keywords or key phrases which reveal the author's attitude toward the film.
 In particular, look for keywords and phrases which reveal:
 - the author's opinion about the film
 - the author's emotional reaction to the film, or how the film made the author feel
@@ -74,7 +74,7 @@ Return a list of relevant keywords or key phrases from the film review. No furth
 
 def keyword_sentiment_analysis_prompt(key_phrases: str):
     """Constructs a prompt to perform keyword-based sentiment analysis of a film review."""
-    main_prompt = f"""Read the following keywords and/or key phrases taken from a film review and decide whether the overall review is positive or negative.
+    main_prompt = f"""Carefully read the following keywords and/or key phrases taken from a film review and decide whether the overall review is positive or negative.
 {RETURN_FORMAT}
 
 ```
