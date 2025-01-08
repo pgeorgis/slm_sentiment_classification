@@ -240,7 +240,7 @@ if __name__ == "__main__":
     run_outdir = create_run_outdir()
 
     # Test various prompt methods with both Qwen models
-    prompt_test_results, imdb_sample = test_prompts_on_models(
+    prompt_test_results, imdb_test_sample = test_prompts_on_models(
         prompts=PROMPT_METHODS,
         models=DEFAULT_MODELS,
         test_data=imdb_test_sample,
