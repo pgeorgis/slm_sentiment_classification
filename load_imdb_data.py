@@ -46,8 +46,9 @@ def load_imdb(split: str="train"):
     return df
 
 
-def sample_from_imdb(imdb_df: pd.DataFrame, examples_per_class: int=100):
+def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int=100):
     """Sample equally from IMDB dataset by label and proportionately by text length."""
+    min_examples_per_class = min(min_examples_per_class, len(imdb_df))
     # Add indices
     selected_indices = {0: set(), 1: set()}
     imdb_df["index"] = range(len(imdb_df))
@@ -82,15 +83,19 @@ def sample_from_imdb(imdb_df: pd.DataFrame, examples_per_class: int=100):
             bracket_df = label_df[label_df["length_bracket"] == bracket]
 
             # Adjust the number of samples for this bracket, according to its frequency
-            bracket_sample_size = max(int(examples_per_class * freq), 1)
+            bracket_sample_size = max(int(min_examples_per_class * freq), 1)
 
             # Sample reviews from this bracket and add their indices to sample_data
             sampled_reviews = bracket_df.sample(n=bracket_sample_size, replace=False, random_state=RANDOM_SEED)
             selected_indices[label].update(sampled_reviews["index"].tolist())
-
-            # Stop once the minimum required examples are collected for each class
-            if len(selected_indices[0]) >= examples_per_class and len(selected_indices[1]) >= examples_per_class:
-                break
+        
+        # Sample again until min_examples_per_class number is reached
+        seed = RANDOM_SEED
+        while len(selected_indices[label]) < min_examples_per_class:
+            seed += 1
+            diff = min_examples_per_class - len(selected_indices[label])
+            additional_samples = label_df.sample(n=diff, replace=False, random_state=seed)
+            selected_indices[label].update(additional_samples["index"].tolist())
     
     # Filter dataframe to only selected indices
     all_selected_indices = selected_indices[0].union(selected_indices[1])

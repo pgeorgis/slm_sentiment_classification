@@ -220,7 +220,7 @@ if __name__ == "__main__":
     logger.info("Loading IMDB dataset...")
     imdb_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
-    imdb_sample = sample_from_imdb(imdb_data, examples_per_class=100)
+    imdb_sample = sample_from_imdb(imdb_data, min_examples_per_class=1000)
     logger.info(f"Drew sample of {len(imdb_sample)} IMDB reviews")
     
     # Create run out directory
