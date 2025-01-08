@@ -6,13 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import f1_score as calculate_f1
-
-# NB: original IMDB dataset has 0 as positive label and 1 as negative label;
-# this is reversed to be more intuitive when loading the dataset
-BINARY_LABEL_MAP = {
-    "positive": 1,
-    "negative": 0,
-}
+from constants import BINARY_LABEL_MAP
 
 
 def binary_eval(ref, hyp, label_map=BINARY_LABEL_MAP):

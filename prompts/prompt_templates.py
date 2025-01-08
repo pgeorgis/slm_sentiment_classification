@@ -1,6 +1,12 @@
 """Prompt template functions."""
-from prompts.prompt_examples import EXAMPLE_POSITIVE_REVIEW, EXAMPLE_NEGATIVE_REVIEW
-from prompts.prompt_texts import ZEROSHOT_PROMPT_BASE, CHAIN_OF_THOUGHT_PROMPT_BASE, RETURN_FORMAT
+from pandas import DataFrame
+
+from constants import (IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL,
+                       IMDB_REVIEW_LABEL_FIELD)
+from prompts.prompt_examples import select_review_examples
+from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE, RETURN_FORMAT,
+                                  ZEROSHOT_PROMPT_BASE)
+
 
 def zeroshot_review_classification(review_text: str):
     """Assembles zero-shot prompt for binary film review classification."""
@@ -13,30 +19,28 @@ def zeroshot_review_classification(review_text: str):
     return prompt
 
 
-def oneshot_review_classification(review_text: str):
-    """Assembles one-shot prompt for binary film review classification."""
-    prompt = f"""{ZEROSHOT_PROMPT_BASE}
+def fewshot_review_classification(review_text: str,
+                                  example_pool: DataFrame,
+                                  n_examples: int = 1,
+                                  ):
+    """Assembles few-shot prompt for binary film review classification."""
 
-Below are 2 examples of reviews with their classification.
-Example review #1:
-```
-{EXAMPLE_POSITIVE_REVIEW}
-```
-Classification: "positive"
+    # Select N examples of both positive and negative reviews
+    positive_example_pool = example_pool[example_pool[IMDB_REVIEW_LABEL_FIELD] == IMDB_POSITIVE_LABEL]
+    negative_example_pool = example_pool[example_pool[IMDB_REVIEW_LABEL_FIELD] == IMDB_NEGATIVE_LABEL]
+    selected_positive_examples = select_review_examples(positive_example_pool, n_examples)
+    selected_negative_examples = select_review_examples(negative_example_pool, n_examples)
 
+    # Start by introducing examples
+    prompt = f"Carefully study the following {n_examples * 2} examples of film reviews with their respective classifications as either positive or negative.\n\n"
+    for i, example in enumerate(selected_positive_examples):
+        prompt += f"""*** Example film review #{i + 1} ***\n```\n{example}\n```\nClassification: "positive"\n\n"""
+    for j, example in enumerate(selected_negative_examples):
+        prompt += f"""*** Example film review #{i + j + 2} ***\n```\n{example}\n```\nClassification: "negative"\n\n"""
 
-Example review #2:
-```
-{EXAMPLE_NEGATIVE_REVIEW}
-```
-Classification: "negative"
+    # Add zero-shot prompt instructions
+    prompt += zeroshot_review_classification(review_text)
 
-
-----REVIEW TO BE CLASSIFIED----
-```
-{review_text}
-```
-"""
     return prompt
 
 
@@ -63,7 +67,7 @@ Return a list of relevant keywords or key phrases from the film review. No furth
 
 ```
 {review_text}
-``` 
+```
 """
     return prompt
 
@@ -72,7 +76,7 @@ def keyword_sentiment_analysis_prompt(key_phrases: str):
     """Constructs a prompt to perform keyword-based sentiment analysis of a film review."""
     main_prompt = f"""Read the following keywords and/or key phrases taken from a film review and decide whether the overall review is positive or negative.
 {RETURN_FORMAT}
-    
+
 ```
 {key_phrases}
 ```

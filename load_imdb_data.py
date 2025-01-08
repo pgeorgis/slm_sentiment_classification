@@ -5,7 +5,9 @@ import re
 import numpy as np
 import pandas as pd
 
-RANDOM_SEED = 32
+from constants import (IMDB_INDEX_FIELD, IMDB_NEGATIVE_LABEL,
+                       IMDB_POSITIVE_LABEL, IMDB_REVIEW_LABEL_FIELD,
+                       IMDB_REVIEW_TEXT_FIELD, RANDOM_SEED)
 
 VALID_SPLITS = {"train", "test"}
 
@@ -37,11 +39,11 @@ def load_imdb(split: str="train"):
     df = pd.read_json(f"hf://datasets/ajaykarthick/imdb-movie-reviews/{split}.jsonl", lines=True)
 
     # Preprocess by removing HTML tags from review texts
-    df["review"] = df["review"].apply(remove_html_tags)
+    df[IMDB_REVIEW_TEXT_FIELD] = df[IMDB_REVIEW_TEXT_FIELD].apply(remove_html_tags)
     
     # Reverse labels: IMDB dataset originally has 0 as positive and 1 as negative
     # Instead use 1 as positive and 0 as negative as this is more intuitive
-    df["label"] = df["label"].apply(reverse_binary_label)
+    df[IMDB_REVIEW_LABEL_FIELD] = df[IMDB_REVIEW_LABEL_FIELD].apply(reverse_binary_label)
 
     return df
 
@@ -51,10 +53,10 @@ def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int=100):
     min_examples_per_class = min(min_examples_per_class, len(imdb_df))
     # Add indices
     selected_indices = {0: set(), 1: set()}
-    imdb_df["index"] = range(len(imdb_df))
+    imdb_df[IMDB_INDEX_FIELD] = range(len(imdb_df))
 
     # Calculate text lengths and sort into brackets
-    imdb_df["wordcount"] = imdb_df["review"].apply(get_wordcount)
+    imdb_df["wordcount"] = imdb_df[IMDB_REVIEW_TEXT_FIELD].apply(get_wordcount)
     wordcounts = imdb_df["wordcount"].to_list()
     max_length = max(wordcounts)
     std_length = np.std(wordcounts)
@@ -72,9 +74,9 @@ def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int=100):
     )
 
     # Draw N examples from each label/class, proportionate to text length bracket frequencies
-    for label in [0, 1]:
+    for label in [IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL]:
         # Filter reviews of the current label
-        label_df = imdb_df[imdb_df["label"] == label]
+        label_df = imdb_df[imdb_df[IMDB_REVIEW_LABEL_FIELD] == label]
         # Count the frequency of each length bracket in this label
         length_bracket_counts = label_df["length_bracket"].value_counts(normalize=True)
 
@@ -87,7 +89,7 @@ def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int=100):
 
             # Sample reviews from this bracket and add their indices to sample_data
             sampled_reviews = bracket_df.sample(n=bracket_sample_size, replace=False, random_state=RANDOM_SEED)
-            selected_indices[label].update(sampled_reviews["index"].tolist())
+            selected_indices[label].update(sampled_reviews[IMDB_INDEX_FIELD].tolist())
         
         # Sample again until min_examples_per_class number is reached
         seed = RANDOM_SEED
@@ -95,10 +97,10 @@ def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int=100):
             seed += 1
             diff = min_examples_per_class - len(selected_indices[label])
             additional_samples = label_df.sample(n=diff, replace=False, random_state=seed)
-            selected_indices[label].update(additional_samples["index"].tolist())
+            selected_indices[label].update(additional_samples[IMDB_INDEX_FIELD].tolist())
     
     # Filter dataframe to only selected indices
     all_selected_indices = selected_indices[0].union(selected_indices[1])
-    imdb_sample = imdb_df[imdb_df["index"].isin(all_selected_indices)]
+    imdb_sample = imdb_df[imdb_df[IMDB_INDEX_FIELD].isin(all_selected_indices)]
     
     return imdb_sample

@@ -13,8 +13,8 @@ from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
                                       extract_key_phrases_prompt,
+                                      fewshot_review_classification,
                                       keyword_sentiment_analysis_prompt,
-                                      oneshot_review_classification,
                                       zeroshot_review_classification)
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
@@ -33,7 +33,7 @@ VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
 
 PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
-    "oneshot": oneshot_review_classification,
+    "fewshot": fewshot_review_classification,
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
@@ -72,6 +72,7 @@ def classify_imdb_review(review_text: str,
                          model: Llama,
                          prompt_template: Prompt,
                          prompt_label: str = None,
+                         example_pool: pd.DataFrame = None,
                          system_message: str = FILM_REVIEW_CLASSIFIER,
                          model_params: dict = None):
     """Classify an IMDB review as a 'positive' or 'negative' review."""
@@ -85,6 +86,8 @@ def classify_imdb_review(review_text: str,
     if use_keywords:
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
+    elif prompt_template == fewshot_review_classification:
+        prompt.generate_prompt(review_text=review_text, example_pool=example_pool, n_examples=3)
     else:
         prompt.generate_prompt(review_text=review_text)
     if not model_params:
@@ -114,6 +117,7 @@ def classify_imdb_review(review_text: str,
 def test_prompt(test_data: pd.DataFrame,
                 prompt_template: Union[Callable, str],
                 prompt_label: str,
+                example_pool: pd.DataFrame,
                 model: Llama,
                 model_params: dict = None):
     """Test a film review classification prompt on IMDB data subset."""
@@ -132,6 +136,7 @@ def test_prompt(test_data: pd.DataFrame,
             prompt_template=prompt_template,
             prompt_label=prompt_label,
             model_params=model_params,
+            example_pool=example_pool
         )
         predictions.append(prediction)
         call_details.append(details)
@@ -167,7 +172,12 @@ def test_prompt(test_data: pd.DataFrame,
     return results, f1_score, call_details, test_data
 
 
-def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame, model_params: dict = None):
+def test_prompts_on_models(prompts: dict,
+                           models: list,
+                           test_data: pd.DataFrame,
+                           example_pool: pd.DataFrame,
+                           model_params: dict = None,
+                           ):
     """Test one or more prompts with one or more models, aggregate results summary into Dataframe."""
     prompt_test_results = []
     for model in models:
@@ -182,6 +192,7 @@ def test_prompts_on_models(prompts: dict, models: list, test_data: pd.DataFrame,
                 prompt_label=prompt_label,
                 model=model,
                 model_params=model_params,
+                example_pool=example_pool,
             )
             results_entry["F1"] = f1_score
             results_entry.update(results)
@@ -218,10 +229,12 @@ def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_out
 if __name__ == "__main__":
     # Load and sample IMDB data
     logger.info("Loading IMDB dataset...")
-    imdb_data = load_imdb("test")
+    imdb_train_data = load_imdb("train")
+    imdb_test_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
-    imdb_sample = sample_from_imdb(imdb_data, min_examples_per_class=1000)
-    logger.info(f"Drew sample of {len(imdb_sample)} IMDB reviews")
+    imdb_train_sample = sample_from_imdb(imdb_train_data, min_examples_per_class=3)
+    imdb_test_sample = sample_from_imdb(imdb_test_data, min_examples_per_class=1000)
+    logger.info(f"Drew test sample of {len(imdb_test_sample)} IMDB reviews")
     
     # Create run out directory
     run_outdir = create_run_outdir()
@@ -230,7 +243,8 @@ if __name__ == "__main__":
     prompt_test_results, imdb_sample = test_prompts_on_models(
         prompts=PROMPT_METHODS,
         models=DEFAULT_MODELS,
-        test_data=imdb_sample,
+        test_data=imdb_test_sample,
+        example_pool=imdb_train_sample,
         model_params={
             "temperature": 0,
             "top_p": 0.99,
@@ -239,7 +253,7 @@ if __name__ == "__main__":
     )
 
     # Write test results with today's date/time and commit hash
-    save_test_results(prompt_test_results, imdb_sample, run_outdir)
+    save_test_results(prompt_test_results, imdb_test_sample, run_outdir)
 
     # Visualize results
     for model in DEFAULT_MODELS:
@@ -248,12 +262,12 @@ if __name__ == "__main__":
             os.makedirs(plot_outdir, exist_ok=True)
             result_label = "_".join([model.name, prompt_label])
             create_tfpn_histogram_by_wordcount(
-                imdb_sample,
+                imdb_test_sample,
                 result_label,
                 outfile=os.path.join(plot_outdir, "wordcount-histogram.png"),
             )
             plot_confusion_matrix(
-                imdb_sample,
+                imdb_test_sample,
                 result_label,
                 outfile=os.path.join(plot_outdir, "confusion-matrix.png"),
             )
