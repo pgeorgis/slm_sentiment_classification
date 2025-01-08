@@ -94,7 +94,7 @@ def classify_imdb_review(review_text: str,
     match_prediction = VALID_REVIEW_REGEX.search(prediction)
     if not match_prediction:
         logger.warning(f"Unexpected response: {prediction}")
-        prediction = ""
+        prediction = None
     else:
         prediction = match_prediction.group()
     prediction = BINARY_LABEL_MAP.get(prediction, prediction)
@@ -105,8 +105,10 @@ def classify_imdb_review(review_text: str,
         details["latency"] += key_phrases_call_details["latency"]
         for key in {"prompt_tokens", "completion_tokens", "total_tokens"}:
             details["usage"][key] += key_phrases_call_details["usage"][key]
+    else:
+        key_phrases = None
     
-    return prediction, details
+    return prediction, details, key_phrases
 
 
 def test_prompt(test_data: pd.DataFrame,
@@ -116,13 +118,15 @@ def test_prompt(test_data: pd.DataFrame,
                 model_params: dict = None):
     """Test a film review classification prompt on IMDB data subset."""
     logger.info(f"Testing prompt '{prompt_label}' with model '{model.name}'...")
+    
+    # Iterate through test dataframe rows and get the prediction for each review text
     test_data = test_data.copy()
-    pred_label = "prediction_" + prompt_label
     result_values = []
     call_details = []
     predictions = []
+    key_phrases_list = []
     for _, row in test_data.iterrows():
-        prediction, details = classify_imdb_review(
+        prediction, details, key_phrases = classify_imdb_review(
             review_text=row["review"],
             model=model,
             prompt_template=prompt_template,
@@ -131,12 +135,35 @@ def test_prompt(test_data: pd.DataFrame,
         )
         predictions.append(prediction)
         call_details.append(details)
-        result_values.append(binary_eval(row["label"], prediction))
+        if key_phrases:
+            key_phrases_list.append(key_phrases)
+        # Evaluate binary classification as true/false positive/negative
+        binary_eval_result = binary_eval(row["label"], prediction) if prediction is not None else None
+        result_values.append(binary_eval_result)
+
+    # Add predictions and T/F P/N results to test dataframe
+    pred_label = "prediction_" + prompt_label
     test_data[pred_label] = predictions
-    f1_score = calculate_f1(test_data["label"], test_data[pred_label])
     result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
+    
+    # Check if keywords are available, if so add to dataframe in separate column
+    if len(key_phrases_list) > 0 and key_phrases_list[0] is not None:
+        test_data["key_phrases"] = key_phrases_list
+    
+    # Drop any test data rows with empty/invalid predictions
+    start_size = len(test_data)
+    test_data = test_data.dropna()
+    end_size = len(test_data)
+    if end_size < start_size:
+        logger.warning(f"Dropped {start_size - end_size} rows with invalid predictions")
+    
+    # Get dictionary of counts of TP, FP, TN, FN
     results = test_data[result_label].value_counts().to_dict()
+
+    # Calculate F1 score
+    f1_score = calculate_f1(test_data["label"], test_data[pred_label])
+
     return results, f1_score, call_details, test_data
 
 
