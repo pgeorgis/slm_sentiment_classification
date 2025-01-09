@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import f1_score as calculate_f1
+
 from constants import BINARY_LABEL_MAP
 
 
@@ -68,12 +69,70 @@ def plot_confusion_matrix(results_df: pd.DataFrame,
         ]
     )
     plt.figure(figsize=(6, 4))
-    sns.heatmap(confusion_matrix, annot=True, fmt='g', cmap='Blues', 
-                xticklabels=['Predicted Negative', 'Predicted Positive'], 
+    sns.heatmap(confusion_matrix, annot=True, fmt='g', cmap='Blues',
+                xticklabels=['Predicted Negative', 'Predicted Positive'],
                 yticklabels=['Actual Negative', 'Actual Positive'])
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
     plt.title('Confusion Matrix')
+    if show_plot:
+        plt.show()
+    if outfile:
+        outdir = os.path.dirname(outfile)
+        os.makedirs(outdir, exist_ok=True)
+        plt.savefig(outfile)
+
+
+def plot_f1_bar_graph(results_df: pd.DataFrame,
+                      outfile: str = None,
+                      show_plot: bool=False):
+    """Plot a bar graph of F1 scores per model per prompt."""
+    plt.figure(figsize=(10, 6))
+    sns.barplot(
+        data=results_df,
+        x='prompt',
+        y='F1',
+        hue='model',
+        palette='viridis'
+    )
+    plt.title('F1 Performance Per Model Per Prompt')
+    plt.xlabel('Prompt')
+    plt.ylabel('F1 Score')
+    plt.ylim((0.75, 1.0))
+    plt.xticks(rotation=45, ha='right')
+    plt.legend(title='Model')
+    plt.tight_layout()
+    if show_plot:
+        plt.show()
+    if outfile:
+        outdir = os.path.dirname(outfile)
+        os.makedirs(outdir, exist_ok=True)
+        plt.savefig(outfile)
+
+
+def plot_f1_latency_scatterplot(results_df: pd.DataFrame,
+                                outfile: str = None,
+                                show_plot: bool = False):
+    """Plot a scatterplot of F1 scores against latency."""
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(
+        data=results_df,
+        x='latency',
+        y='F1',
+        hue='model',
+        style='prompt',
+        palette='viridis',
+        s=100,
+    )
+
+    plt.title('F1 Score vs. Latency')
+    plt.xlabel('Average Latency (seconds)')
+    plt.ylabel('F1 Score')
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.grid(True)
+    plt.tight_layout()
+
+    # Show or save the plot
     if show_plot:
         plt.show()
     if outfile:

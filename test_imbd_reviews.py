@@ -10,7 +10,8 @@ from llama_cpp import Llama
 
 from constants import COMMIT_HASH, DEFAULT_MODELS, logger, qwen_15B
 from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
-                  create_tfpn_histogram_by_wordcount, plot_confusion_matrix)
+                  create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
+                  plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
                                       extract_key_phrases_prompt,
@@ -260,18 +261,28 @@ if __name__ == "__main__":
     save_test_results(prompt_test_results, imdb_test_sample, run_outdir)
 
     # Visualize results
+    plot_outdir = os.path.join(run_outdir, "plots")
+    os.makedirs(plot_outdir, exist_ok=True)
+    plot_f1_bar_graph(
+        prompt_test_results,
+        outfile=os.path.join(plot_outdir, "f1-comparison-by-model-and-prompt.png"),
+    )
+    plot_f1_latency_scatterplot(
+        prompt_test_results,
+        outfile=os.path.join(plot_outdir, "f1-vs-latency-scatterplot.png"),
+    )
     for model in DEFAULT_MODELS:
         for prompt_label in PROMPT_METHODS:
-            plot_outdir = os.path.join(run_outdir, model.name, prompt_label)
-            os.makedirs(plot_outdir, exist_ok=True)
+            model_prompt_plot_outdir = os.path.join(plot_outdir, model.name, prompt_label)
+            os.makedirs(model_prompt_plot_outdir, exist_ok=True)
             result_label = "_".join([model.name, prompt_label])
             create_tfpn_histogram_by_wordcount(
                 imdb_test_sample,
                 result_label,
-                outfile=os.path.join(plot_outdir, "wordcount-histogram.png"),
+                outfile=os.path.join(model_prompt_plot_outdir, "wordcount-histogram.png"),
             )
             plot_confusion_matrix(
                 imdb_test_sample,
                 result_label,
-                outfile=os.path.join(plot_outdir, "confusion-matrix.png"),
+                outfile=os.path.join(model_prompt_plot_outdir, "confusion-matrix.png"),
             )
