@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 COMMIT_HASH = get_git_commit_hash()
 
 RANDOM_SEED = 32
+FEWSHOT_EXAMPLE_N = 3
 
 # IMDB dataset field labels
 IMDB_REVIEW_TEXT_FIELD = "review"

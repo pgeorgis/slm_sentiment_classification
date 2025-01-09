@@ -8,7 +8,8 @@ from typing import Callable, Union
 import pandas as pd
 from llama_cpp import Llama
 
-from constants import COMMIT_HASH, DEFAULT_MODELS, logger, qwen_15B
+from constants import (COMMIT_HASH, DEFAULT_MODELS, FEWSHOT_EXAMPLE_N, logger,
+                       qwen_15B)
 from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
@@ -84,7 +85,7 @@ def classify_imdb_review(review_text: str,
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
     elif prompt_template == fewshot_review_classification:
-        prompt.generate_prompt(review_text=review_text, example_pool=example_pool, n_examples=3)
+        prompt.generate_prompt(review_text=review_text, example_pool=example_pool, n_examples=FEWSHOT_EXAMPLE_N)
     else:
         prompt.generate_prompt(review_text=review_text)
     if not model_params:
@@ -237,7 +238,7 @@ if __name__ == "__main__":
     imdb_train_data = load_imdb("train")
     imdb_test_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
-    imdb_train_sample = sample_from_imdb(imdb_train_data, min_examples_per_class=3)
+    imdb_train_sample = sample_from_imdb(imdb_train_data, min_examples_per_class=FEWSHOT_EXAMPLE_N)
     imdb_test_sample = sample_from_imdb(imdb_test_data, min_examples_per_class=min_test_examples_per_class)
     logger.info(f"Drew test sample of {len(imdb_test_sample)} IMDB reviews")
 
