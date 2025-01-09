@@ -249,7 +249,7 @@ if __name__ == "__main__":
         example_pool=imdb_train_sample,
         model_params={
             "temperature": 0,
-            "top_p": 0.99,
+            "top_p": 0.10,
             "top_k": 5,
         }
     )
