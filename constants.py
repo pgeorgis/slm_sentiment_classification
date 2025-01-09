@@ -1,5 +1,11 @@
 """Initializes constants."""
+import logging
+
+from slm_models import get_qwen05B, get_qwen15B
 from utils import get_git_commit_hash
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 COMMIT_HASH = get_git_commit_hash()
 
@@ -17,3 +23,10 @@ BINARY_LABEL_MAP = {
     "positive": IMDB_POSITIVE_LABEL,
     "negative": IMDB_NEGATIVE_LABEL,
 }
+
+
+# Initialize SLM models
+logger.info("Initializing SLM Qwen models...")
+qwen_05B = get_qwen05B()
+qwen_15B = get_qwen15B()
+DEFAULT_MODELS = [qwen_05B, qwen_15B]

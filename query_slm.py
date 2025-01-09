@@ -60,7 +60,7 @@ def query_slm(model: Llama,
               top_p: float = 0.95,
               top_k: int = 40,
               **kwargs):
-    """Query an SLM model with input messages for chat completion."""
+    """Query a pretrained Llama SLM model with a Prompt object for chat completion."""
 
     # Extract prompt content
     prompt_content = prompt.prompt

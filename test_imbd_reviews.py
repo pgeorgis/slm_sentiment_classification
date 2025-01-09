@@ -1,5 +1,4 @@
 import argparse
-import logging
 import os
 import re
 from functools import lru_cache
@@ -9,7 +8,7 @@ from typing import Callable, Union
 import pandas as pd
 from llama_cpp import Llama
 
-from constants import COMMIT_HASH
+from constants import COMMIT_HASH, DEFAULT_MODELS, logger, qwen_15B
 from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix)
 from load_imdb_data import load_imdb, sample_from_imdb
@@ -21,11 +20,7 @@ from prompts.prompt_templates import (chain_of_thought_prompt,
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
-from slm_models import qwen_05B, qwen_15B
-from utils import create_datestamp, create_timestamp, get_git_commit_hash
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
-logger = logging.getLogger(__name__)
+from utils import create_datestamp, create_timestamp
 
 VALID_REVIEW_LABELS = {"positive", "negative"}
 VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
@@ -36,8 +31,6 @@ PROMPT_METHODS = {
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
-
-DEFAULT_MODELS = [qwen_05B, qwen_15B]
 
 
 def create_run_outdir(test_label=None):
@@ -231,8 +224,8 @@ def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_out
 
 if __name__ == "__main__":
     # Parse input
-    parser = argparse.ArgumentParser(description='Tests several SLM prompts on a subset of the IMDB dataset')
-    parser.add_argument('--test_size', type=int, help='Number of test examples')
+    parser = argparse.ArgumentParser(description='Test several SLM prompts on a subset of the IMDB dataset.')
+    parser.add_argument('--test_size', type=int, default=100, help='Number of test examples')
     parser.add_argument('--test_label', type=str, default=None, help='Optional test label')
     args = parser.parse_args()
     test_size = args.test_size
