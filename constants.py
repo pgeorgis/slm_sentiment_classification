@@ -1,4 +1,7 @@
 """Initializes constants."""
+from utils import get_git_commit_hash
+
+COMMIT_HASH = get_git_commit_hash()
 
 RANDOM_SEED = 32
 

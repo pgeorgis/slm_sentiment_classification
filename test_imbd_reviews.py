@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import re
@@ -8,6 +9,7 @@ from typing import Callable, Union
 import pandas as pd
 from llama_cpp import Llama
 
+from constants import COMMIT_HASH
 from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix)
 from load_imdb_data import load_imdb, sample_from_imdb
@@ -20,13 +22,10 @@ from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
 from slm_models import qwen_05B, qwen_15B
-from utils import create_timestamp, get_git_commit_hash
+from utils import create_datestamp, create_timestamp, get_git_commit_hash
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
-
-COMMIT_HASH = get_git_commit_hash()
-START_TIME = create_timestamp()
 
 VALID_REVIEW_LABELS = {"positive", "negative"}
 VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
@@ -41,10 +40,14 @@ PROMPT_METHODS = {
 DEFAULT_MODELS = [qwen_05B, qwen_15B]
 
 
-def create_run_outdir():
-    """Create an outdir for a single test run."""
+def create_run_outdir(test_label=None):
+    """Create an output directory for a single test run."""
+    today = create_datestamp()
+    timestamp = create_timestamp()
+    if test_label is None:
+        test_label = ""
     results_outdir = os.path.abspath("results")
-    run_outdir = os.path.join(results_outdir, f"{START_TIME}_{COMMIT_HASH}")
+    run_outdir = os.path.join(results_outdir, today, test_label, COMMIT_HASH, timestamp)
     os.makedirs(run_outdir, exist_ok=True)
     return run_outdir
 
@@ -101,7 +104,7 @@ def classify_imdb_review(review_text: str,
     else:
         prediction = match_prediction.group()
     prediction = BINARY_LABEL_MAP.get(prediction, prediction)
-    
+
     # If keyword extraction was applied,
     # add latency and token usage details from that call to overall details
     if use_keywords:
@@ -110,7 +113,7 @@ def classify_imdb_review(review_text: str,
             details["usage"][key] += key_phrases_call_details["usage"][key]
     else:
         key_phrases = None
-    
+
     return prediction, details, key_phrases
 
 
@@ -122,7 +125,7 @@ def test_prompt(test_data: pd.DataFrame,
                 model_params: dict = None):
     """Test a film review classification prompt on IMDB data subset."""
     logger.info(f"Testing prompt '{prompt_label}' with model '{model.name}'...")
-    
+
     # Iterate through test dataframe rows and get the prediction for each review text
     test_data = test_data.copy()
     result_values = []
@@ -151,18 +154,18 @@ def test_prompt(test_data: pd.DataFrame,
     test_data[pred_label] = predictions
     result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
-    
+
     # Check if keywords are available, if so add to dataframe in separate column
     if len(key_phrases_list) > 0 and key_phrases_list[0] is not None:
         test_data["key_phrases"] = key_phrases_list
-    
+
     # Drop any test data rows with empty/invalid predictions
     start_size = len(test_data)
     test_data = test_data.dropna()
     end_size = len(test_data)
     if end_size < start_size:
         logger.warning(f"Dropped {start_size - end_size} rows with invalid predictions")
-    
+
     # Get dictionary of counts of TP, FP, TN, FN
     results = test_data[result_label].value_counts().to_dict()
 
@@ -227,17 +230,22 @@ def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_out
 
 
 if __name__ == "__main__":
+    # Parse input
+    parser = argparse.ArgumentParser(description='Tests several SLM prompts on a subset of the IMDB dataset')
+    parser.add_argument('--test_size', type=int, help='Number of test examples')
+    parser.add_argument('--test_label', type=str, default=None, help='Optional test label')
+    args = parser.parse_args()
+    test_size = args.test_size
+    min_test_examples_per_class = int(test_size / 2)
+
     # Load and sample IMDB data
     logger.info("Loading IMDB dataset...")
     imdb_train_data = load_imdb("train")
     imdb_test_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
     imdb_train_sample = sample_from_imdb(imdb_train_data, min_examples_per_class=3)
-    imdb_test_sample = sample_from_imdb(imdb_test_data, min_examples_per_class=1000)
+    imdb_test_sample = sample_from_imdb(imdb_test_data, min_examples_per_class=min_test_examples_per_class)
     logger.info(f"Drew test sample of {len(imdb_test_sample)} IMDB reviews")
-    
-    # Create run out directory
-    run_outdir = create_run_outdir()
 
     # Test various prompt methods with both Qwen models
     prompt_test_results, imdb_test_sample = test_prompts_on_models(
@@ -251,6 +259,9 @@ if __name__ == "__main__":
             "top_k": 5,
         }
     )
+
+    # Create run out directory
+    run_outdir = create_run_outdir(args.test_label)
 
     # Write test results with today's date/time and commit hash
     save_test_results(prompt_test_results, imdb_test_sample, run_outdir)
