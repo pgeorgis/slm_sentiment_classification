@@ -1,6 +1,6 @@
-huggingface-hub
-llama-cpp-python
-matplotlib
-pandas
-seaborn
-scikit-learn
+huggingface-hub==0.27.0
+llama-cpp-python==0.3.5
+matplotlib==3.10.0
+pandas==2.2.3
+seaborn==0.13.2
+scikit-learn==1.6.0
