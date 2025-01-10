@@ -1,4 +1,5 @@
 """Prompt template functions."""
+# pylama:ignore=E501
 from pandas import DataFrame
 
 from constants import (IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL,

@@ -4,6 +4,7 @@ from llama_cpp import Llama
 
 N_CTX = 32769
 
+
 def get_qwen05B(name="Qwen-0.5B"):
     """Create an instance of 0.5B (500M) parameter Qwen model."""
     qwen_05B = Llama.from_pretrained(

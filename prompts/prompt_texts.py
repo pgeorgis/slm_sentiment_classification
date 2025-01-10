@@ -1,4 +1,5 @@
 """Text components of prompts shared across multiple prompts."""
+# pylama:ignore=E501
 
 RETURN_FORMAT = """Return only the labels "positive" or "negative". No further explanation is needed."""
 

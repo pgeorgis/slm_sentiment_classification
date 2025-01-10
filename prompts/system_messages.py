@@ -1,4 +1,5 @@
 """System role strings."""
+# pylama:ignore=E501
 
 DEFAULT_ASSISTANT = "You are a helpful assistant."
 

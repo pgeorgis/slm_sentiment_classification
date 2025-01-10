@@ -28,7 +28,7 @@ class Prompt:
         elif isinstance(self.template, Callable):
             user_msg_content = self.template(**kwargs)
         else:
-            raise TypeError(f"Prompt template must be a string or function, found {type(self.template)}")
+            raise TypeError(f"Prompt template must be a string or function, found {type(self.template)}")  # noqa: E501
         messages = [
             {
                 "role": "system",
@@ -97,7 +97,7 @@ def query_slm(model: Llama,
     finish_reason = response_choice["finish_reason"]
     if finish_reason != "stop":
         logger.warning(f"Model response finish reason: {finish_reason}")
-        
+
     # Add latency, token usage, finish reason to model details dict
     # together with model params, prompt ID, and model name
     details = model_params.copy()

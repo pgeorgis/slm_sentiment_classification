@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from sklearn.metrics import f1_score as calculate_f1
 
 from constants import BINARY_LABEL_MAP
 
 
 def binary_eval(ref, hyp, label_map=BINARY_LABEL_MAP):
-    """Return either TP [true positive], FP [false positive], TN [true negative], FN [false negative] based on binary classification 0 and 1."""
+    """Return either TP [true positive], FP [false positive], TN [true negative],
+    FN [false negative] based on binary classification 0 and 1."""
     if ref not in {0, 1} and not label_map.get(ref):
         raise ValueError(f"Invalid binary reference '{ref}'")
     if hyp not in {0, 1} and not label_map.get(hyp):
@@ -29,8 +29,8 @@ def binary_eval(ref, hyp, label_map=BINARY_LABEL_MAP):
 
 def create_tfpn_histogram_by_wordcount(results_df: pd.DataFrame,
                                        categorical_column: str,
-                                       show_plot: bool=False,
-                                       outfile: str=None):
+                                       show_plot: bool = False,
+                                       outfile: str = None):
     """Create histogram of TP/TN/FP/FN results according to word count of film review text."""
     unique_categories = sorted(results_df[categorical_column].unique())
     plt.figure(figsize=(8, 5))
@@ -44,7 +44,7 @@ def create_tfpn_histogram_by_wordcount(results_df: pd.DataFrame,
         palette='Set2',
         multiple="stack"
     )
-    plt.title(f"Classification Result by Word Count of Film Review")
+    plt.title("Classification Result by Word Count of Film Review")
     plt.xlabel("Word Count")
     plt.ylabel("Frequency")
     if outfile:
@@ -58,7 +58,7 @@ def create_tfpn_histogram_by_wordcount(results_df: pd.DataFrame,
 def plot_confusion_matrix(results_df: pd.DataFrame,
                           results_column: str,
                           outfile: str = None,
-                          show_plot: bool=False):
+                          show_plot: bool = False):
     """Plot a confusion matrix."""
     results = results_df[results_column].value_counts(normalize=False)
     results = results.to_dict()
@@ -85,7 +85,7 @@ def plot_confusion_matrix(results_df: pd.DataFrame,
 
 def plot_f1_bar_graph(results_df: pd.DataFrame,
                       outfile: str = None,
-                      show_plot: bool=False):
+                      show_plot: bool = False):
     """Plot a bar graph of F1 scores per model per prompt."""
     plt.figure(figsize=(10, 6))
     sns.barplot(

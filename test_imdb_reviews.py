@@ -7,10 +7,11 @@ from typing import Callable, Union
 
 import pandas as pd
 from llama_cpp import Llama
+from sklearn.metrics import f1_score as calculate_f1
 
 from constants import (COMMIT_HASH, DEFAULT_MODELS, FEWSHOT_EXAMPLE_N, logger,
                        qwen_15B)
-from eval import (BINARY_LABEL_MAP, binary_eval, calculate_f1,
+from eval import (BINARY_LABEL_MAP, binary_eval,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
@@ -85,7 +86,11 @@ def classify_imdb_review(review_text: str,
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
     elif prompt_template == fewshot_review_classification:
-        prompt.generate_prompt(review_text=review_text, example_pool=example_pool, n_examples=FEWSHOT_EXAMPLE_N)
+        prompt.generate_prompt(
+            review_text=review_text,
+            example_pool=example_pool,
+            n_examples=FEWSHOT_EXAMPLE_N
+        )
     else:
         prompt.generate_prompt(review_text=review_text)
     if not model_params:
@@ -141,7 +146,10 @@ def test_prompt(test_data: pd.DataFrame,
         if key_phrases:
             key_phrases_list.append(key_phrases)
         # Evaluate binary classification as true/false positive/negative
-        binary_eval_result = binary_eval(row["label"], prediction) if prediction is not None else None
+        if prediction is not None:
+            binary_eval_result = binary_eval(row["label"], prediction)
+        else:
+            binary_eval_result = None
         result_values.append(binary_eval_result)
 
     # Add predictions and T/F P/N results to test dataframe
@@ -176,7 +184,8 @@ def test_prompts_on_models(prompts: dict,
                            example_pool: pd.DataFrame,
                            model_params: dict = None,
                            ):
-    """Test one or more prompts with one or more models, aggregate results summary into Dataframe."""
+    """Test one or more prompts with one or more models,
+    aggregate results summary into Dataframe."""
     prompt_test_results = []
     for model in models:
         for prompt_label, prompt_template in prompts.items():
@@ -205,10 +214,18 @@ def test_prompts_on_models(prompts: dict,
                     if key not in results_entry:
                         results_entry[key] = value
             # Take average of latency and token usage
-            results_entry["latency"] = mean([call_detail["latency"] for call_detail in call_details])
-            results_entry["prompt_tokens"] = mean([call_detail["usage"]["prompt_tokens"] for call_detail in call_details])
-            results_entry["completion_tokens"] = mean([call_detail["usage"]["completion_tokens"] for call_detail in call_details])
-            results_entry["total_tokens"] = mean([call_detail["usage"]["total_tokens"] for call_detail in call_details])
+            results_entry["latency"] = mean(
+                [call_detail["latency"] for call_detail in call_details]
+            )
+            results_entry["prompt_tokens"] = mean(
+                [call_detail["usage"]["prompt_tokens"] for call_detail in call_details]
+            )
+            results_entry["completion_tokens"] = mean(
+                [call_detail["usage"]["completion_tokens"] for call_detail in call_details]
+            )
+            results_entry["total_tokens"] = mean(
+                [call_detail["usage"]["total_tokens"] for call_detail in call_details]
+            )
             prompt_test_results.append(results_entry)
     prompt_test_results = pd.DataFrame(prompt_test_results)
     return prompt_test_results, test_data
@@ -216,17 +233,19 @@ def test_prompts_on_models(prompts: dict,
 
 def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_outdir: str):
     """Save test summary and raw results on sample data to TSV files."""
-    summary_outfile = os.path.join(run_outdir, f"results-summary.tsv")
+    summary_outfile = os.path.join(run_outdir, "results-summary.tsv")
     summary_df.to_csv(summary_outfile, sep="\t", index=False)
     logger.info(f"Wrote test summary to {summary_outfile}")
-    results_outfile = os.path.join(run_outdir, f"imdb-sample-results.tsv")
+    results_outfile = os.path.join(run_outdir, "imdb-sample-results.tsv")
     logger.info(f"Wrote test results to {results_outfile}")
     sample_df.to_csv(results_outfile, sep="\t", index=False)
 
 
 if __name__ == "__main__":
     # Parse input
-    parser = argparse.ArgumentParser(description='Test several SLM prompts on a subset of the IMDB dataset.')
+    parser = argparse.ArgumentParser(
+        description='Test several SLM prompts on a subset of the IMDB dataset.'
+    )
     parser.add_argument('--test_size', type=int, default=500, help='Number of test examples')
     parser.add_argument('--test_label', type=str, default=None, help='Optional test label')
     args = parser.parse_args()
@@ -238,8 +257,14 @@ if __name__ == "__main__":
     imdb_train_data = load_imdb("train")
     imdb_test_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
-    imdb_train_sample = sample_from_imdb(imdb_train_data, min_examples_per_class=FEWSHOT_EXAMPLE_N)
-    imdb_test_sample = sample_from_imdb(imdb_test_data, min_examples_per_class=min_test_examples_per_class)
+    imdb_train_sample = sample_from_imdb(
+        imdb_train_data,
+        min_examples_per_class=FEWSHOT_EXAMPLE_N
+    )
+    imdb_test_sample = sample_from_imdb(
+        imdb_test_data,
+        min_examples_per_class=min_test_examples_per_class
+    )
     logger.info(f"Drew test sample of {len(imdb_test_sample)} IMDB reviews")
 
     # Test various prompt methods with both Qwen models
