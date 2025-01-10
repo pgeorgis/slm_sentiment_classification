@@ -227,7 +227,7 @@ def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_out
 if __name__ == "__main__":
     # Parse input
     parser = argparse.ArgumentParser(description='Test several SLM prompts on a subset of the IMDB dataset.')
-    parser.add_argument('--test_size', type=int, default=100, help='Number of test examples')
+    parser.add_argument('--test_size', type=int, default=500, help='Number of test examples')
     parser.add_argument('--test_label', type=str, default=None, help='Optional test label')
     args = parser.parse_args()
     test_size = args.test_size
