@@ -9,7 +9,8 @@ import pandas as pd
 from llama_cpp import Llama
 from sklearn.metrics import f1_score as calculate_f1
 
-from constants import (COMMIT_HASH, DEFAULT_MODELS, FEWSHOT_EXAMPLE_N, logger,
+from constants import (COMMIT_HASH, DEFAULT_MODELS, FEWSHOT_EXAMPLE_N,
+                       IMDB_REVIEW_LABEL_FIELD, IMDB_REVIEW_TEXT_FIELD, logger,
                        qwen_15B)
 from eval import (BINARY_LABEL_MAP, binary_eval,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
@@ -134,7 +135,7 @@ def test_prompt(test_data: pd.DataFrame,
     key_phrases_list = []
     for _, row in test_data.iterrows():
         prediction, details, key_phrases = classify_imdb_review(
-            review_text=row["review"],
+            review_text=row[IMDB_REVIEW_TEXT_FIELD],
             model=model,
             prompt_template=prompt_template,
             prompt_label=prompt_label,
@@ -147,7 +148,10 @@ def test_prompt(test_data: pd.DataFrame,
             key_phrases_list.append(key_phrases)
         # Evaluate binary classification as true/false positive/negative
         if prediction is not None:
-            binary_eval_result = binary_eval(row["label"], prediction)
+            binary_eval_result = binary_eval(
+                row[IMDB_REVIEW_LABEL_FIELD],
+                prediction
+            )
         else:
             binary_eval_result = None
         result_values.append(binary_eval_result)
@@ -173,7 +177,7 @@ def test_prompt(test_data: pd.DataFrame,
     results = test_data[result_label].value_counts().to_dict()
 
     # Calculate F1 score
-    f1_score = calculate_f1(test_data["label"], test_data[pred_label])
+    f1_score = calculate_f1(test_data[IMDB_REVIEW_LABEL_FIELD], test_data[pred_label])
 
     return results, f1_score, call_details, test_data
 
