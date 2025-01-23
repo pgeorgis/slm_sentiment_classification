@@ -17,6 +17,7 @@ from eval import (BINARY_LABEL_MAP, binary_eval,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (chain_of_thought_prompt,
+                                      chain_of_thought_v2_prompt,
                                       extract_key_phrases_prompt,
                                       fewshot_review_classification,
                                       keyword_sentiment_analysis_prompt,
@@ -34,6 +35,7 @@ PROMPT_METHODS = {
     "fewshot": fewshot_review_classification,
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
+    "chain-of-thought-v2": chain_of_thought_v2_prompt,
 }
 
 
@@ -281,6 +283,7 @@ if __name__ == "__main__":
             "temperature": 0,
             "top_p": 0.10,
             "top_k": 5,
+            "max_tokens": 200,
         }
     )
 

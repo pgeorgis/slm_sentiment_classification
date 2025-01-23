@@ -5,8 +5,9 @@ from pandas import DataFrame
 from constants import (IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL,
                        IMDB_REVIEW_LABEL_FIELD)
 from prompts.prompt_examples import select_review_examples
-from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE, RETURN_FORMAT,
-                                  ZEROSHOT_PROMPT_BASE)
+from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE,
+                                  CHAIN_OF_THOUGHT_V2_PROMPT_BASE,
+                                  RETURN_FORMAT, ZEROSHOT_PROMPT_BASE)
 
 
 def zeroshot_review_classification(review_text: str):
@@ -48,6 +49,16 @@ def fewshot_review_classification(review_text: str,
 def chain_of_thought_prompt(review_text: str):
     """Assembles a chain-of-thought style prompt for film review binary classification."""
     prompt = f"""{CHAIN_OF_THOUGHT_PROMPT_BASE}
+
+```
+{review_text}
+```
+"""
+    return prompt
+
+def chain_of_thought_v2_prompt(review_text: str):
+    """Assembles a chain-of-thought style prompt for film review binary classification."""
+    prompt = f"""{CHAIN_OF_THOUGHT_V2_PROMPT_BASE}
 
 ```
 {review_text}
