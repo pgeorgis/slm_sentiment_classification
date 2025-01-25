@@ -63,6 +63,7 @@ def chain_of_thought_v2_prompt(review_text: str):
 ```
 {review_text}
 ```
+A: Let's think step by step.
 """
     return prompt
 

@@ -26,7 +26,7 @@ They employed some independents to do the score, and some of the soundtrack, and
 If you have a chance to catch this movie in a small theater or at a film festival (like I did), I highly recommend that you go see it.
 Also, on a personal note, Paget Brewster is beautiful in this movie. That's reason enough to go check it out.
 ```
-A: The author of the film review expresses praise of film's writing, characters, and music.
+A: Let's think step by step. The author of the film review expresses praise of film's writing, characters, and music.
 The author found the characters realistic and the plot engaging, and they recommend seeing the movie.
 The overall sentiment of the review is positive.
 
@@ -41,7 +41,7 @@ I did give it a 4, not a 0, because the start of the movie had some nice element
 The relationship between the main, dark-haired girl and her fiancée is touched upon briefly, and the placement of the blond friend's impact on that relationship is present, though awkwardly so.
 The business discovered at the end is becoming more mainstream and decently done, though, as another commenter pointed out, not unexpected.  ~viper~
 ```
-A: Although the author appreciated the start of the film, they criticized the film's shallow characters, unrealistic scenes, and vapid plot.
+A: Let's think step by step. Although the author appreciated the start of the film, they criticized the film's shallow characters, unrealistic scenes, and vapid plot.
 The author found the screenplay disappointing and pointed out specific examples of poor writing and cinematography.
 The overall sentiment of the review is negative.
 
@@ -54,7 +54,7 @@ Honestly, the plot was so predictable and dull that you could zone out completel
 And yet... I’d watch it again in a heartbeat. It’s the perfect movie to throw on with friends, just to roast every absurd, cringe-worthy moment.
 If you love a good "so-bad-it's-good" experience, this is the ultimate guilty pleasure.
 ```
-A: Even though the author pointed out the film's poor writing, acting, and predictable plot, they enjoyed the film for its campy, absurd qualities.
+A: Let's think step by step. Even though the author pointed out the film's poor writing, acting, and predictable plot, they enjoyed the film for its campy, absurd qualities.
 The author found the movie entertaining for precisely these flaws and would watch it again with friends for a laugh.
 The overall sentiment of the review is positive.
 
