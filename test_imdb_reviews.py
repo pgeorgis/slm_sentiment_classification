@@ -195,7 +195,7 @@ def test_prompt(test_data: pd.DataFrame,
         if key_phrases:
             key_phrases_list.append(key_phrases)
         if rating:
-            ratings.append(rating)
+        ratings.append(rating)
         # Evaluate binary classification as true/false positive/negative
         if prediction is not None:
             binary_eval_result = binary_eval(
