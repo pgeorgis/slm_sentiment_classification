@@ -13,7 +13,17 @@ Let's think step-by-step:
 - Confirm that this positive or negative sentiment matches the overall tone of the review.
 {RETURN_FORMAT}"""
 
-CHAIN_OF_THOUGHT_V2_PROMPT_BASE = f"""
+FILM_REVIEW_TIPS = """Consider the following when analyzing film reviews:
+- What emotions does the author express toward the film? For example, is the author impressed, pleased, moved, or excited (positive emotions)? Or is the author bored, disgusted, disappointed, or confused (negative emotions)?
+- Consider the author's description of the film's writing, plot, acting, cinematography, and other elements. Does the author praise or criticize these aspects? How does this contribute to the overall sentiment of the review?
+- Did the author enjoy the film overrall, even if they had some criticisms? This can indicate a generally positive sentiment. Remember that a film does not need to be high quality to be enjoyable.
+- Consider the author's tone. Does the author use sarcasm or hyperbole for comedic effect? If so, consider how this affects the overall attitude of the review.
+- Would the author recommend the film to others, even if not to everyone? This can indicate a positive sentiment.
+- Does the author mention an explicit star rating out of 10? Ratings >5 are positive and <5 are negative.
+"""
+
+CHAIN_OF_THOUGHT_V2_PROMPT_BASE = f"""{FILM_REVIEW_TIPS}
+
 Q: Is the overall sentiment of the following film review positive or negative?
 
 ```
