@@ -47,4 +47,17 @@ The overall sentiment of the review is negative.
 
 
 Q: Is the overall sentiment of the following film review positive or negative?
+```
+This film is absolute trash -- in the best way possible. It’s so unapologetically camp that it borders on iconic.
+The writing and acting are hilariously bad; I was laughing so hard I nearly cried.
+Honestly, the plot was so predictable and dull that you could zone out completely and still not miss a thing.
+And yet... I’d watch it again in a heartbeat. It’s the perfect movie to throw on with friends, just to roast every absurd, cringe-worthy moment.
+If you love a good "so-bad-it's-good" experience, this is the ultimate guilty pleasure.
+```
+A: Even though the author pointed out the film's poor writing, acting, and predictable plot, they enjoyed the film for its campy, absurd qualities.
+The author found the movie entertaining for precisely these flaws and would watch it again with friends for a laugh.
+The overall sentiment of the review is positive.
+
+
+Q: Is the overall sentiment of the following film review positive or negative?
 """
