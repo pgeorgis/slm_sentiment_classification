@@ -71,6 +71,15 @@ def extract_review_keywords(review_text: str,
     )
     return key_phrases, details
 
+
+def binary_classify_rating(rating: int, positive_threshold: int = 5):
+    """Classify a numeric rating as 'positive' or 'negative'."""
+    if rating >= positive_threshold:
+        return "positive"
+    else:
+        return "negative"
+
+
 def postprocess_predicted_rating(predicted_rating: str, positive_threshold: int = 5) -> str|None:
     """Postprocess a predicted rating to classify as 'positive' or 'negative'.
 
@@ -83,11 +92,9 @@ def postprocess_predicted_rating(predicted_rating: str, positive_threshold: int 
     """
     match_rating = re.search(r"\d+", predicted_rating)
     if match_rating:
-        match_rating = int(match_rating.group())
-        if match_rating >= positive_threshold:
-            return "positive", match_rating
-        else:
-            return "negative", match_rating
+        numeric_rating = int(match_rating.group())
+        binary_rating = binary_classify_rating(numeric_rating, positive_threshold)
+        return binary_rating, numeric_rating
     else:
         logger.warning(f"Unable to extract rating from prediction: {predicted_rating}")
         return None, None
@@ -121,12 +128,23 @@ def classify_imdb_review(review_text: str,
         prompt.generate_prompt(review_text=review_text)
     if not model_params:
         model_params = {}
-    prediction, details = query_slm(model, prompt, **model_params)
-    prediction = prediction.strip().lower()
-    rating = None
     if prompt_template == rating_based_sentiment_analysis_prompt:
-        prediction, rating = postprocess_predicted_rating(str(prediction))
+        ratings = []
+        for i in range(3):
+            rating_model_params = {"temperature": 0.7}
+            prediction, details = query_slm(model, prompt, **rating_model_params)
+            prediction, rating = postprocess_predicted_rating(str(prediction))
+            if rating is not None:
+                ratings.append(rating)
+        if len(ratings) > 0:
+            rating = mean(ratings)
+            prediction = binary_classify_rating(rating)
+        else:
+            rating, prediction = None, None
     else:
+        rating = None
+        prediction, details = query_slm(model, prompt, **model_params)
+        prediction = prediction.strip().lower()
         match_prediction = VALID_REVIEW_REGEX.search(prediction)
         if not match_prediction:
             logger.warning(f"Unexpected response: {prediction}")
