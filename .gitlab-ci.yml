@@ -35,6 +35,3 @@ test:
     paths:
       - results/
     expire_in: never
-  cache:
-    <<: *default-cache
-    policy: pull
