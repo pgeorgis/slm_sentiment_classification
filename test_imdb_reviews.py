@@ -72,7 +72,7 @@ def extract_review_keywords(review_text: str,
 
 def classify_imdb_review(review_text: str,
                          model: Llama,
-                         prompt_template: Prompt,
+                         prompt_template: Union[Callable, str],
                          prompt_label: str = None,
                          example_pool: pd.DataFrame = None,
                          system_message: str = FILM_REVIEW_CLASSIFIER,
@@ -185,7 +185,7 @@ def test_prompt(test_data: pd.DataFrame,
 
 
 def test_prompts_on_models(prompts: dict,
-                           models: list,
+                           models: list[Llama],
                            test_data: pd.DataFrame,
                            example_pool: pd.DataFrame,
                            model_params: dict = None,
