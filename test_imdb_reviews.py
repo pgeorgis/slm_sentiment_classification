@@ -21,6 +21,7 @@ from prompts.prompt_templates import (chain_of_thought_prompt,
                                       extract_key_phrases_prompt,
                                       fewshot_review_classification,
                                       keyword_sentiment_analysis_prompt,
+                                      rating_based_sentiment_analysis_prompt,
                                       zeroshot_review_classification)
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
@@ -36,6 +37,7 @@ PROMPT_METHODS = {
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
     "chain-of-thought-v2": chain_of_thought_v2_prompt,
+    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt,
 }
 
 
@@ -69,6 +71,27 @@ def extract_review_keywords(review_text: str,
     )
     return key_phrases, details
 
+def postprocess_predicted_rating(predicted_rating: str, positive_threshold: int = 5) -> str|None:
+    """Postprocess a predicted rating to classify as 'positive' or 'negative'.
+
+    Args:
+        predicted_rating (str): Predicted rating of the film review on a scale from 1 to 10.
+        positive_threshold (int, optional): Threshold for positive rating. Defaults to 5.
+
+    Returns:
+        str|None: 'positive' or 'negative' classification of the review. None is returned if no numeric rating is found.
+    """
+    match_rating = re.search(r"\d+", predicted_rating)
+    if match_rating:
+        match_rating = int(match_rating.group())
+        if match_rating >= positive_threshold:
+            return "positive", match_rating
+        else:
+            return "negative", match_rating
+    else:
+        logger.warning(f"Unable to extract rating from prediction: {predicted_rating}")
+        return None, None
+
 
 def classify_imdb_review(review_text: str,
                          model: Llama,
@@ -100,12 +123,16 @@ def classify_imdb_review(review_text: str,
         model_params = {}
     prediction, details = query_slm(model, prompt, **model_params)
     prediction = prediction.strip().lower()
-    match_prediction = VALID_REVIEW_REGEX.search(prediction)
-    if not match_prediction:
-        logger.warning(f"Unexpected response: {prediction}")
-        prediction = None
+    rating = None
+    if prompt_template == rating_based_sentiment_analysis_prompt:
+        prediction, rating = postprocess_predicted_rating(str(prediction))
     else:
-        prediction = match_prediction.group()
+        match_prediction = VALID_REVIEW_REGEX.search(prediction)
+        if not match_prediction:
+            logger.warning(f"Unexpected response: {prediction}")
+            prediction = None
+        else:
+            prediction = match_prediction.group()
     prediction = BINARY_LABEL_MAP.get(prediction, prediction)
 
     # If keyword extraction was applied,
@@ -117,7 +144,7 @@ def classify_imdb_review(review_text: str,
     else:
         key_phrases = None
 
-    return prediction, details, key_phrases
+    return prediction, details, key_phrases, rating
 
 
 def test_prompt(test_data: pd.DataFrame,
@@ -135,8 +162,9 @@ def test_prompt(test_data: pd.DataFrame,
     call_details = []
     predictions = []
     key_phrases_list = []
+    ratings = []
     for _, row in test_data.iterrows():
-        prediction, details, key_phrases = classify_imdb_review(
+        prediction, details, key_phrases, rating = classify_imdb_review(
             review_text=row[IMDB_REVIEW_TEXT_FIELD],
             model=model,
             prompt_template=prompt_template,
@@ -148,6 +176,8 @@ def test_prompt(test_data: pd.DataFrame,
         call_details.append(details)
         if key_phrases:
             key_phrases_list.append(key_phrases)
+        if rating:
+            ratings.append(rating)
         # Evaluate binary classification as true/false positive/negative
         if prediction is not None:
             binary_eval_result = binary_eval(
@@ -166,7 +196,11 @@ def test_prompt(test_data: pd.DataFrame,
 
     # Check if keywords are available, if so add to dataframe in separate column
     if len(key_phrases_list) > 0 and key_phrases_list[0] is not None:
-        test_data["key_phrases"] = key_phrases_list
+        test_data[f"key_phrases_{model.name}"] = key_phrases_list
+    
+    # Check if ratings are available, if so add to dataframe in separate column
+    if len(ratings) > 0 and ratings[0] is not None:
+        test_data[f"rating_{model.name}"] = ratings
 
     # Drop any test data rows with empty/invalid predictions
     start_size = len(test_data)

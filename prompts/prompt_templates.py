@@ -95,3 +95,15 @@ def keyword_sentiment_analysis_prompt(key_phrases: str):
 ```
 """
     return main_prompt
+
+
+def rating_based_sentiment_analysis_prompt(review_text: str):
+    """Constructs a prompt to perform sentiment analysis based on a film review's estimated rating."""
+    prompt = f"""Carefully read the following film review and estimate the rating on a scale from 1 to 10 that the author would give to the film or to their overall experience.
+Return only the estimated rating as an integer. No further explanation is needed.
+
+```
+{review_text}
+```
+"""
+    return prompt
