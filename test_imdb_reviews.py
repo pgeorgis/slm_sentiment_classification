@@ -16,13 +16,11 @@ from eval import (BINARY_LABEL_MAP, binary_eval,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
-from prompts.prompt_templates import (chain_of_thought_prompt,
-                                      chain_of_thought_v2_prompt,
-                                      extract_key_phrases_prompt,
-                                      fewshot_review_classification,
-                                      keyword_sentiment_analysis_prompt,
-                                      rating_based_sentiment_analysis_prompt,
-                                      zeroshot_review_classification)
+from prompts.prompt_templates import (
+    chain_of_thought_prompt, chain_of_thought_v2_prompt,
+    chain_of_thought_with_numeric_ratings_prompt, extract_key_phrases_prompt,
+    fewshot_review_classification, keyword_sentiment_analysis_prompt,
+    rating_based_sentiment_analysis_prompt, zeroshot_review_classification)
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
@@ -37,7 +35,8 @@ PROMPT_METHODS = {
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
     "chain-of-thought-v2": chain_of_thought_v2_prompt,
-    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt,
+    "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt
+    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt
 }
 
 
@@ -80,19 +79,49 @@ def binary_classify_rating(rating: int, positive_threshold: int = 5):
         return "negative"
 
 
-def postprocess_predicted_rating(predicted_rating: str, positive_threshold: int = 5) -> str|None:
+def extract_rating_from_json(prediction_json: str):
+    """
+    Extracts the rating value from a JSON string.
+
+    This function takes a JSON string, removes any leading or trailing 
+    markdown code block delimiters (```json and ```), parses the string 
+    into a dictionary, and then attempts to extract the value associated 
+    with the keys "rating" or "ratings".
+
+    Args:
+        prediction_json (str): A JSON string potentially containing a 
+                               "rating" or "ratings" key.
+
+    Returns:
+        int or float or None: The value associated with the "rating" or 
+                              "ratings" key if found, otherwise None.
+    """
+    prediction_json = re.sub(r'\n', r' ', prediction_json, re.DOTALL)
+    prediction_json = re.sub(r'\s+', r' ', prediction_json, re.DOTALL)
+    prediction = re.search(r'ratings?":\s*"?(\-?\d+)', prediction_json)
+    if prediction:
+        return prediction.group(1)
+    return None
+
+
+def postprocess_predicted_rating(predicted_rating: str, from_json=False, positive_threshold: int = 5) -> str|None:
     """Postprocess a predicted rating to classify as 'positive' or 'negative'.
 
     Args:
         predicted_rating (str): Predicted rating of the film review on a scale from 1 to 10.
+        from_json (bool, optional): Whether to extract the predicted rating from a json object or from raw text.
         positive_threshold (int, optional): Threshold for positive rating. Defaults to 5.
 
     Returns:
         str|None: 'positive' or 'negative' classification of the review. None is returned if no numeric rating is found.
     """
-    match_rating = re.search(r"\d+", predicted_rating)
+    if from_json:
+        match_rating = extract_rating_from_json(predicted_rating)
+    else:
+        match_rating = re.search(r"\d+", predicted_rating)
+        match_rating = match_rating.group()
     if match_rating:
-        numeric_rating = int(match_rating.group())
+        numeric_rating = int(match_rating)
         binary_rating = binary_classify_rating(numeric_rating, positive_threshold)
         return binary_rating, numeric_rating
     else:
@@ -128,12 +157,19 @@ def classify_imdb_review(review_text: str,
         prompt.generate_prompt(review_text=review_text)
     if not model_params:
         model_params = {}
-    if prompt_template == rating_based_sentiment_analysis_prompt:
+    if prompt_template in {
+        rating_based_sentiment_analysis_prompt,
+        chain_of_thought_with_numeric_ratings_prompt
+    }:
+        if prompt_template == chain_of_thought_with_numeric_ratings_prompt:
+            from_json = True
+        else:
+            from_json = False
         ratings = []
         for i in range(3):
-            rating_model_params = {"temperature": 0.7}
+            rating_model_params = {"temperature": 0.4}
             prediction, details = query_slm(model, prompt, **rating_model_params)
-            prediction, rating = postprocess_predicted_rating(str(prediction))
+            prediction, rating = postprocess_predicted_rating(str(prediction), from_json=from_json)
             if rating is not None:
                 ratings.append(rating)
         if len(ratings) > 0:

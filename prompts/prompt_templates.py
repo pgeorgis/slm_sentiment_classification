@@ -7,6 +7,7 @@ from constants import (IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL,
 from prompts.prompt_examples import select_review_examples
 from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE,
                                   CHAIN_OF_THOUGHT_V2_PROMPT_BASE,
+                                  CHAIN_OF_THOUGHT_WITH_NUMERIC_RATINGS_BASE,
                                   RETURN_FORMAT, ZEROSHOT_PROMPT_BASE)
 
 
@@ -65,6 +66,17 @@ def chain_of_thought_v2_prompt(review_text: str):
 ```
 A: Let's think step by step.
 """
+    return prompt
+
+
+def chain_of_thought_with_numeric_ratings_prompt(review_text: str):
+    """Assembles a chain-of-thought style prompt for obtaining numeric ratings of film reviews."""
+    prompt = f"""{CHAIN_OF_THOUGHT_WITH_NUMERIC_RATINGS_BASE}
+
+```
+{review_text}
+```
+A: """
     return prompt
 
 
