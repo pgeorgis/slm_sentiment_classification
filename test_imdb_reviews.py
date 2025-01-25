@@ -119,7 +119,8 @@ def postprocess_predicted_rating(predicted_rating: str, from_json=False, positiv
         match_rating = extract_rating_from_json(predicted_rating)
     else:
         match_rating = re.search(r"\d+", predicted_rating)
-        match_rating = match_rating.group()
+        if match_rating:
+            match_rating = match_rating.group()
     if match_rating:
         numeric_rating = int(match_rating)
         binary_rating = binary_classify_rating(numeric_rating, positive_threshold)
