@@ -6,11 +6,12 @@ from functools import lru_cache
 from pandas import DataFrame
 
 from constants import IMDB_INDEX_FIELD, IMDB_REVIEW_TEXT_FIELD, RANDOM_SEED
+from embedding import (EMBEDDING_ID_MAP_FILE, EMBEDDING_INDEX_FILE,
+                       EMBEDDING_MODEL, load_faiss_index,
+                       retrieve_most_similar_texts)
+from load_imdb_data import split_positive_negative_reviews
 
-EXAMPLE_POSITIVE_REVIEW = """"The Lost Journey" is a masterful piece of storytelling that captivates the audience from start to finish. The film beautifully balances breathtaking visuals with a deeply emotional narrative. The protagonist’s transformation is both inspiring and relatable, as they confront their fears and discover their true strength. The cinematography is stunning, with sweeping shots of the wilderness that immerse you in the story’s world. The score is hauntingly beautiful, adding layers of depth to the already compelling plot. This is a movie that stays with you long after the credits roll, sparking conversations about resilience and self-discovery. Highly recommended for anyone seeking a heartfelt and visually stunning cinematic experience."""
-
-EXAMPLE_NEGATIVE_REVIEW = """"The Lost Journey" tries hard to be profound but falls flat with its overly sentimental and predictable storyline. The pacing is excruciatingly slow, with long, drawn-out scenes that add little to the narrative. While the cinematography is visually impressive, it feels like style over substance, as the film struggles to deliver any real emotional impact. The protagonist’s journey feels forced and lacks authenticity, making it difficult to connect with their struggles. The dialogue is often cliché, and the supporting characters are one-dimensional. Despite its ambition, the film ultimately feels hollow and fails to live up to its potential. Save your time and skip this one."""
-
+EMBEDDING_INDEX, EMBEDDING_ID_MAP = load_faiss_index(EMBEDDING_INDEX_FILE, EMBEDDING_ID_MAP_FILE)
 
 EXAMPLE_REVIEW_001 = """I was really impressed with this film. 
 The writing was fantastic, and the characters were all rich, and simple. 
@@ -55,3 +56,55 @@ def select_review_examples(example_pool: DataFrame, n_examples: int):
     selected_example_indices = select_example_indices(tuple(indices), n_examples)
     selected_examples = example_pool[example_pool[IMDB_INDEX_FIELD].isin(selected_example_indices)]
     return selected_examples[IMDB_REVIEW_TEXT_FIELD].to_list()
+
+
+def select_positive_and_negative_examples(example_pool, n_examples):
+    """Select N examples of both positive and negative reviews."""
+    positive_example_pool, negative_example_pool = split_positive_negative_reviews(example_pool)
+    selected_positive_examples = select_review_examples(positive_example_pool, n_examples)
+    selected_negative_examples = select_review_examples(negative_example_pool, n_examples)
+    return selected_positive_examples, selected_negative_examples
+
+
+def select_positive_and_negative_reviews_by_embedding_similarity(review_text: str,
+                                                                 example_pool: DataFrame,
+                                                                 n_examples: int = 1,
+                                                                 ):
+    """Select N most similar positive and negative examples to a given review text using
+    embedding similarity search wrt training set review texts."""
+    positive_reviews, negative_reviews = split_positive_negative_reviews(example_pool)
+    positive_indices = set(positive_reviews[IMDB_INDEX_FIELD].to_list())
+    negative_indices = set(negative_reviews[IMDB_INDEX_FIELD].to_list())
+    selected_positive_reviews = retrieve_most_similar_texts(
+        query_text=review_text,
+        embedding_model=EMBEDDING_MODEL,
+        index=EMBEDDING_INDEX,
+        id_map=EMBEDDING_ID_MAP,
+        top_n=n_examples,
+        valid_ids=positive_indices,
+    )
+    selected_negative_reviews = retrieve_most_similar_texts(
+        query_text=review_text,
+        embedding_model=EMBEDDING_MODEL,
+        index=EMBEDDING_INDEX,
+        id_map=EMBEDDING_ID_MAP,
+        top_n=n_examples,
+        valid_ids=negative_indices,
+    )
+    # Extract indices
+    selected_positive_indices = [idx for idx, _ in selected_positive_reviews]
+    selected_negative_indices = [idx for idx, _ in selected_negative_reviews]
+    
+    # Map indices to review texts
+    selected_positive_reviews = positive_reviews.loc[
+        positive_reviews[IMDB_INDEX_FIELD].isin(selected_positive_indices), 
+        IMDB_REVIEW_TEXT_FIELD
+    ].tolist()
+    selected_negative_reviews = negative_reviews.loc[
+        negative_reviews[IMDB_INDEX_FIELD].isin(selected_negative_indices), 
+        IMDB_REVIEW_TEXT_FIELD
+    ].tolist()
+    
+    # Return lists of review texts
+    return selected_positive_reviews, selected_negative_reviews
+
