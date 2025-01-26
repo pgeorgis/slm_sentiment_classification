@@ -74,8 +74,8 @@ def fewshot_review_classification_with_similar_examples(review_text: str,
     )
 
 
-def chain_of_thought_prompt(review_text: str):
-    """Assembles a chain-of-thought style prompt for film review binary classification."""
+def chain_of_thought_instructions_prompt(review_text: str):
+    """Assembles an instruction-based chain-of-thought style prompt for film review binary classification."""
     prompt = f"""{CHAIN_OF_THOUGHT_PROMPT_BASE}
 
 ```
@@ -84,8 +84,8 @@ def chain_of_thought_prompt(review_text: str):
 """
     return prompt
 
-def chain_of_thought_v2_prompt(review_text: str):
-    """Assembles a chain-of-thought style prompt for film review binary classification."""
+def chain_of_thought_traditional_prompt(review_text: str):
+    """Assembles a traditional chain-of-thought style prompt for film review binary classification."""
     prompt = f"""{CHAIN_OF_THOUGHT_V2_PROMPT_BASE}
 
 ```
