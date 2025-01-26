@@ -35,8 +35,8 @@ PROMPT_METHODS = {
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
     "chain-of-thought-v2": chain_of_thought_v2_prompt,
-    "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt
-    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt
+    "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
+    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt,
 }
 
 
