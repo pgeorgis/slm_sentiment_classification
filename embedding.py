@@ -146,3 +146,5 @@ if __name__ == "__main__":
         imdb_embedding_index, id_map,
         EMBEDDING_INDEX_FILE, EMBEDDING_ID_MAP_FILE
     )
+    logger.info(f"Wrote FAISS vector embedding index to {EMBEDDING_INDEX_FILE}")
+    logger.info(f"Wrote FAISS vector embedding ID map to {EMBEDDING_ID_MAP_FILE}")
