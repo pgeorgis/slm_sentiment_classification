@@ -7,15 +7,20 @@ variables:
   VENV_PATH: ".venv"
 
 default:
-  image: python:3.12-alpine
-  before_script:
-    - apk add --no-cache build-base
-  cache: &default-cache
-    key: $CI_COMMIT_REF_NAME
-    paths:
-      - .cache/llama-cpp-python
-      - .venv/
-    policy: pull-push
+  image: alpine:latest
+  before_script:  
+    - apk add --no-cache git build-base python3 python3-dev py3-pip py3-virtualenv
+  cache:
+    - &venv-cache
+      key: "$CI_COMMIT_REF_NAME"
+      paths:
+        - $VENV_PATH
+      policy: pull
+    - &llm-cache
+      key: global
+      paths:
+        - $HF_HOME
+      policy: pull
 
 setup:
   stage: setup
@@ -23,6 +28,12 @@ setup:
     - python3 -m venv $VENV_PATH
     - source $VENV_PATH/bin/activate
     - pip install -r requirements.txt
+    - python3 constants.py
+  cache:
+    - <<: *venv-cache
+      policy: pull-push
+    - <<: *llm-cache
+      policy: pull-push
 
 test:
   stage: test
