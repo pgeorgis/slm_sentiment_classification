@@ -1,4 +1,5 @@
 import argparse
+import glob
 import os
 import re
 from collections import defaultdict
@@ -307,6 +308,7 @@ def test_prompts_on_models(prompts: dict,
                            test_data: pd.DataFrame,
                            example_pool: pd.DataFrame,
                            model_params: dict = None,
+                           run_outdir: str = None,
                            ):
     """Test one or more prompts with one or more models,
     aggregate results summary into Dataframe."""
@@ -351,18 +353,35 @@ def test_prompts_on_models(prompts: dict,
                 [call_detail["usage"]["total_tokens"] for call_detail in call_details]
             )
             prompt_test_results.append(results_entry)
+
+            # Write intermediate/checkpoint results after each prompt is tested
+            if (len(prompts) > 1 or len(models) > 1) and run_outdir is not None:
+                intermediate_results = pd.DataFrame(prompt_test_results)
+                save_test_results(
+                    summary_df=intermediate_results,
+                    sample_df=test_data,
+                    run_outdir=run_outdir,
+                    test_label="intermediate",
+                )
     prompt_test_results = pd.DataFrame(prompt_test_results)
     return prompt_test_results, test_data
 
 
-def save_test_results(summary_df: pd.DataFrame, sample_df: pd.DataFrame, run_outdir: str):
+def save_test_results(summary_df: pd.DataFrame,
+                      sample_df: pd.DataFrame,
+                      run_outdir: str,
+                      test_label: str = None):
     """Save test summary and raw results on sample data to TSV files."""
-    summary_outfile = os.path.join(run_outdir, "results-summary.tsv")
-    summary_df.to_csv(summary_outfile, sep="\t", index=False)
-    logger.info(f"Wrote test summary to {summary_outfile}")
-    results_outfile = os.path.join(run_outdir, "imdb-sample-results.tsv")
-    logger.info(f"Wrote test results to {results_outfile}")
-    sample_df.to_csv(results_outfile, sep="\t", index=False)
+    if test_label is None:
+        summary_outfile_path = os.path.join(run_outdir, "results-summary.tsv")
+        results_outfile_path = os.path.join(run_outdir, "imdb-sample-results.tsv")
+    else:
+        summary_outfile_path = os.path.join(run_outdir, f"{test_label}_results-summary.tsv")
+        results_outfile_path = os.path.join(run_outdir, f"{test_label}_imdb-sample-results.tsv")
+    summary_df.to_csv(summary_outfile_path, sep="\t", index=False)
+    logger.info(f"Wrote test summary to {summary_outfile_path}")
+    logger.info(f"Wrote test results to {results_outfile_path}")
+    sample_df.to_csv(results_outfile_path, sep="\t", index=False)
 
 
 if __name__ == "__main__":
@@ -387,6 +406,9 @@ if __name__ == "__main__":
     )
     logger.info(f"Drew test sample of {len(imdb_test_sample)} IMDB reviews")
 
+    # Create run out directory
+    run_outdir = create_run_outdir(args.test_label)
+
     # Test various prompt methods with both Qwen models
     prompt_test_results, imdb_test_sample = test_prompts_on_models(
         prompts=PROMPT_METHODS,
@@ -398,14 +420,16 @@ if __name__ == "__main__":
             "top_p": 0.10,
             "top_k": 5,
             "max_tokens": 200,
-        }
+        },
+        run_outdir=run_outdir,
     )
-
-    # Create run out directory
-    run_outdir = create_run_outdir(args.test_label)
 
     # Write test results with today's date/time and commit hash
     save_test_results(prompt_test_results, imdb_test_sample, run_outdir)
+    # Clean up any intermediate results
+    intermediate_outfiles = glob.glob(os.path.join(run_outdir, "intermediate*"))
+    for intermediate_file in intermediate_outfiles:
+        os.remove(intermediate_file)
 
     # Visualize results
     plot_outdir = os.path.join(run_outdir, "plots")
