@@ -1,6 +1,7 @@
 import argparse
 import os
 import re
+from collections import defaultdict
 from functools import lru_cache
 from statistics import mean
 from typing import Callable, Union
@@ -176,12 +177,23 @@ def classify_imdb_review(review_text: str,
         else:
             from_json = True
         ratings = []
-        for i in range(3):
+        n_calls = 3
+        details = defaultdict(lambda: 0)
+        for i in range(n_calls):
             rating_model_params = {"temperature": 0.4}
-            prediction, details = query_slm(model, prompt, **rating_model_params)
+            prediction, details_i = query_slm(model, prompt, **rating_model_params)
             prediction, rating = postprocess_predicted_rating(str(prediction), from_json=from_json)
             if rating is not None:
                 ratings.append(rating)
+            # Get token usage and latency from each call
+            for field in details_i:
+                if field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
+                    details[field] += details_i[field]
+                else:
+                    details[field] = details_i[field]
+        # Get average of token usage and latency
+        for field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
+            details[field] /= n_calls
         if len(ratings) > 0:
             rating = mean(ratings)
             prediction = binary_classify_rating(rating)
