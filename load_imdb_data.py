@@ -110,3 +110,10 @@ def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int = 100):
     imdb_sample = imdb_df[imdb_df[IMDB_INDEX_FIELD].isin(all_selected_indices)]
 
     return imdb_sample
+
+
+def split_positive_negative_reviews(review_df: pd.DataFrame):
+    """Separate positive and negative reviews from a subset of the IMDB dataset."""
+    positive_reviews = review_df[review_df[IMDB_REVIEW_LABEL_FIELD] == IMDB_POSITIVE_LABEL]
+    negative_reviews = review_df[review_df[IMDB_REVIEW_LABEL_FIELD] == IMDB_NEGATIVE_LABEL]
+    return positive_reviews, negative_reviews

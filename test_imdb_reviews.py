@@ -19,8 +19,10 @@ from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (
     chain_of_thought_prompt, chain_of_thought_v2_prompt,
     chain_of_thought_with_numeric_ratings_prompt, extract_key_phrases_prompt,
-    fewshot_review_classification, keyword_sentiment_analysis_prompt,
-    rating_based_sentiment_analysis_prompt, zeroshot_review_classification)
+    fewshot_review_classification,
+    fewshot_review_classification_with_similar_examples,
+    keyword_sentiment_analysis_prompt, rating_based_sentiment_analysis_prompt,
+    zeroshot_review_classification)
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
@@ -32,6 +34,7 @@ VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
 PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
     "fewshot": fewshot_review_classification,
+    "fewshot_by_similarity": fewshot_review_classification_with_similar_examples,
     "chain-of-thought": chain_of_thought_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
     "chain-of-thought-v2": chain_of_thought_v2_prompt,
@@ -148,7 +151,10 @@ def classify_imdb_review(review_text: str,
     if use_keywords:
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
-    elif prompt_template == fewshot_review_classification:
+    elif prompt_template in {
+        fewshot_review_classification,
+        fewshot_review_classification_with_similar_examples
+    }:
         prompt.generate_prompt(
             review_text=review_text,
             example_pool=example_pool,
@@ -351,10 +357,6 @@ if __name__ == "__main__":
     imdb_train_data = load_imdb("train")
     imdb_test_data = load_imdb("test")
     logger.info("Sampling from IMDB dataset...")
-    imdb_train_sample = sample_from_imdb(
-        imdb_train_data,
-        min_examples_per_class=FEWSHOT_EXAMPLE_N
-    )
     imdb_test_sample = sample_from_imdb(
         imdb_test_data,
         min_examples_per_class=min_test_examples_per_class
@@ -366,7 +368,7 @@ if __name__ == "__main__":
         prompts=PROMPT_METHODS,
         models=DEFAULT_MODELS,
         test_data=imdb_test_sample,
-        example_pool=imdb_train_sample,
+        example_pool=imdb_train_data,
         model_params={
             "temperature": 0,
             "top_p": 0.10,

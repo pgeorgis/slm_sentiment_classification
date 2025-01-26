@@ -2,9 +2,9 @@
 # pylama:ignore=E501
 from pandas import DataFrame
 
-from constants import (IMDB_NEGATIVE_LABEL, IMDB_POSITIVE_LABEL,
-                       IMDB_REVIEW_LABEL_FIELD)
-from prompts.prompt_examples import select_review_examples
+from prompts.prompt_examples import (
+    select_positive_and_negative_examples,
+    select_positive_and_negative_reviews_by_embedding_similarity)
 from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE,
                                   CHAIN_OF_THOUGHT_V2_PROMPT_BASE,
                                   CHAIN_OF_THOUGHT_WITH_NUMERIC_RATINGS_BASE,
@@ -25,14 +25,25 @@ def zeroshot_review_classification(review_text: str):
 def fewshot_review_classification(review_text: str,
                                   example_pool: DataFrame,
                                   n_examples: int = 1,
+                                  selection_method: str = "random",
                                   ):
     """Assembles few-shot prompt for binary film review classification."""
+    if selection_method not in {"random", "embedding_similarity"}:
+        raise ValueError(f"Unexpected selection method '{selection_method}'")
 
     # Select N examples of both positive and negative reviews
-    positive_example_pool = example_pool[example_pool[IMDB_REVIEW_LABEL_FIELD] == IMDB_POSITIVE_LABEL]
-    negative_example_pool = example_pool[example_pool[IMDB_REVIEW_LABEL_FIELD] == IMDB_NEGATIVE_LABEL]
-    selected_positive_examples = select_review_examples(positive_example_pool, n_examples)
-    selected_negative_examples = select_review_examples(negative_example_pool, n_examples)
+    # Faiss embedding similarity-based example selection
+    if selection_method == "embedding_similarity":
+        selected_positive_examples, selected_negative_examples = select_positive_and_negative_reviews_by_embedding_similarity(
+            review_text=review_text,
+            example_pool=example_pool,
+            n_examples=n_examples,
+        )
+    else:  # Random example selection
+        selected_positive_examples, selected_negative_examples = select_positive_and_negative_examples(
+            example_pool=example_pool,
+            n_examples=n_examples,
+        )
 
     # Start by introducing examples
     prompt = f"Carefully study the following {n_examples * 2} examples of film reviews with their respective classifications as either positive or negative.\n\n"
@@ -45,6 +56,19 @@ def fewshot_review_classification(review_text: str,
     prompt += zeroshot_review_classification(review_text)
 
     return prompt
+
+
+def fewshot_review_classification_with_similar_examples(review_text: str,
+                                                        example_pool: DataFrame,
+                                                        n_examples: int = 1,
+                                                        ):
+    """Construct fewshot prompt with most similar positive and negative train examplesto review in question."""
+    return fewshot_review_classification(
+        review_text=review_text,
+        example_pool=example_pool,
+        n_examples=n_examples,
+        selection_method="embedding_similarity",
+    )
 
 
 def chain_of_thought_prompt(review_text: str):
