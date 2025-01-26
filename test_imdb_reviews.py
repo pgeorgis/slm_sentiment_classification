@@ -18,6 +18,7 @@ from eval import (BINARY_LABEL_MAP, binary_eval,
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (
     chain_of_thought_prompt, chain_of_thought_v2_prompt,
+    chain_of_thought_with_likelihood_to_rewatch_prompt,
     chain_of_thought_with_numeric_ratings_prompt, extract_key_phrases_prompt,
     fewshot_review_classification,
     fewshot_review_classification_with_similar_examples,
@@ -39,6 +40,7 @@ PROMPT_METHODS = {
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
     "chain-of-thought-v2": chain_of_thought_v2_prompt,
     "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
+    "chain-of-thought-rewatch-likelihood": chain_of_thought_with_likelihood_to_rewatch_prompt,
     "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt,
 }
 
@@ -101,9 +103,9 @@ def extract_rating_from_json(prediction_json: str):
     """
     prediction_json = re.sub(r'\n', r' ', prediction_json, re.DOTALL)
     prediction_json = re.sub(r'\s+', r' ', prediction_json, re.DOTALL)
-    prediction = re.search(r'ratings?":\s*"?(\-?\d+)', prediction_json)
+    prediction = re.search(r'(ratings?|likelihood.*)":\s*"?(\-?\d+)', prediction_json)
     if prediction:
-        return prediction.group(1)
+        return prediction.group(2)
     return None
 
 
@@ -166,12 +168,13 @@ def classify_imdb_review(review_text: str,
         model_params = {}
     if prompt_template in {
         rating_based_sentiment_analysis_prompt,
-        chain_of_thought_with_numeric_ratings_prompt
+        chain_of_thought_with_numeric_ratings_prompt,
+        chain_of_thought_with_likelihood_to_rewatch_prompt,
     }:
-        if prompt_template == chain_of_thought_with_numeric_ratings_prompt:
-            from_json = True
-        else:
+        if prompt_template == rating_based_sentiment_analysis_prompt:
             from_json = False
+        else:
+            from_json = True
         ratings = []
         for i in range(3):
             rating_model_params = {"temperature": 0.4}
