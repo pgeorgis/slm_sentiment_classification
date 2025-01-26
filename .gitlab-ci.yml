@@ -5,44 +5,94 @@ stages:
 variables:
   HF_HOME: ".cache/llama-cpp-python"
   VENV_PATH: ".venv"
+  PIP_CACHE_DIR: ".cache/pip"
+  RUNNER_AFTER_SCRIPT_TIMEOUT: 20m
+  GIT_STRATEGY: fetch
+  CI_TAG_NAME: ${DOCKER_REGISTRY}/slm_sentiment_classification/ci
+  CI_IMAGE: ${CI_TAG_NAME}:${CI_COMMIT_SHA}
+  DIND_IMAGE: docker:27-dind
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
 
 default:
-  image: python:3.12-slim
-  before_script:  
-    - apt-get update
-    - apt-get install -y gcc g++ build-essential git
+  image: ${CI_IMAGE}
   cache:
     - &venv-cache
-      key: $CI_COMMIT_REF_NAME
+      key:
+        files:
+          - requirements.txt
       paths:
-        - .venv
+        - $VENV_PATH
+        - $PIP_CACHE_DIR
       policy: pull
     - &llm-cache
-      key: global
+      key:
+        files:
+          - constants.py
+          - requirements.txt
       paths:
-        - .cache/llama-cpp-python
+        - $HF_HOME
       policy: pull
 
-setup:
+setup:ci:
   stage: setup
+  image: ${DIND_IMAGE}
+  interruptible: true
+  before_script: []
+  services:
+    - name: ${DIND_IMAGE}
+      command: [ "--registry-mirror", "https://registry-mirror.mama2.de" ]
+  script:
+    - export CI_MAIN_NAME=${CI_TAG_NAME}:main
+    - export CI_BRANCH_NAME=${CI_TAG_NAME}:`echo ${CI_COMMIT_REF_NAME} | tr '/' '-'`
+    - docker login ${DOCKER_REGISTRY} -u ${DOCKER_REGISTRY_USER} -p ${DOCKER_REGISTRY_PASSWORD}
+    - docker login ${DOCKER_REGISTRY_MIRROR} -u ${DOCKER_REGISTRY_MIRROR_USER} -p ${DOCKER_REGISTRY_MIRROR_PASSWORD}
+    - >
+      (docker pull ${CI_IMAGE} && echo "Using commit image")
+      || (docker pull ${CI_BRANCH_NAME} && docker tag ${CI_BRANCH_NAME} ${CI_IMAGE} && echo "Using branch image") 
+      || (docker pull ${CI_MAIN_NAME} && docker tag ${CI_MAIN_NAME} ${CI_IMAGE} && echo "Using main image") 
+      || echo "Using no image and building from scratch"
+    - docker build -f ci.dockerfile -t ${CI_IMAGE} --cache-to type=inline --cache-from ${CI_IMAGE} .
+    - docker tag ${CI_IMAGE} ${CI_BRANCH_NAME}
+    - docker push ${CI_TAG_NAME} --all-tags
+  cache: []
+
+setup:install_dependencies:
+  stage: setup
+  needs:
+    - setup:ci
   script:
     - python3 -m venv $VENV_PATH
     - source $VENV_PATH/bin/activate
     - pip install -r requirements.txt
-    - python3 constants.py
   cache:
     - <<: *venv-cache
       policy: pull-push
+  rules:
+    - changes:
+      - requirements.txt
+
+setup:download_slm:
+  stage: setup
+  needs:
+    - setup:install_dependencies
+  script:
+    - source $VENV_PATH/bin/activate
+    - python3 constants.py
+  cache:
+    - <<: *venv-cache
     - <<: *llm-cache
       policy: pull-push
+  rules:
+    - changes:
+        - constants.py
+        - requirements.txt
 
 test:
   stage: test
-  dependencies:
-    - setup
   script:
     - source $VENV_PATH/bin/activate
-    - python3 test_imdb_reviews.py
+    - python3 test_imdb_reviews.py --test_size 100
   artifacts:
     paths:
       - results/
