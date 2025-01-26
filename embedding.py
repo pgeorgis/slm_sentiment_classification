@@ -5,8 +5,8 @@ import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from constants import IMDB_INDEX_FIELD, IMDB_REVIEW_TEXT_FIELD
-from load_imdb_data import load_imdb
+from constants import IMDB_INDEX_FIELD, IMDB_REVIEW_TEXT_FIELD, logger
+from load_imdb_data import get_wordcount, load_imdb
 
 EMBEDDING_DIR = os.path.abspath("embedding")
 EMBEDDING_INDEX_FILE = os.path.join(EMBEDDING_DIR, "imdb_embedding_index.pkl")
@@ -129,10 +129,15 @@ if __name__ == "__main__":
     # Load IMDB train set
     imdb_train_data = load_imdb("train")
 
+    # Add wordcount field
+    imdb_train_data["wordcount"] = imdb_train_data[IMDB_REVIEW_TEXT_FIELD].apply(get_wordcount)
+
     # Extract tuples (index, review text) from train set
     texts_with_ids = [
         (row[IMDB_INDEX_FIELD], row[IMDB_REVIEW_TEXT_FIELD])
         for _, row in imdb_train_data.iterrows()
+        # Limit to relatively short reviews between 75-150 words
+        if row["wordcount"] >= 75 and row["wordcount"] <= 150
     ]
 
     # Create IMDB embedding index
