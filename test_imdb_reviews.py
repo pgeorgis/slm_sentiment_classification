@@ -123,6 +123,7 @@ def postprocess_predicted_rating(predicted_rating: str, from_json=False, positiv
 
 
 def quantitative_sentiment_classification(prompt: Prompt,
+                                          model: Llama,
                                           n_calls: int = 3,
                                           temperature: float = 0.4,
                                           ):
@@ -209,7 +210,7 @@ def classify_imdb_review(review_text: str,
     # Handle sentiment analysis methods using quantitative/numeric estimates
     if prompt_template in QUANTITATIVE_PROMPT_METHODS:
         prediction, rating, likelihood_to_rewatch, details = quantitative_sentiment_classification(
-            prompt_template=prompt_template
+            prompt=prompt, model=model,
         )
         additional_details["rating"] = rating
         additional_details["likelihood_to_rewatch"] = likelihood_to_rewatch
