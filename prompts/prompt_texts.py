@@ -94,3 +94,42 @@ A:
 
 Q: How would the author of the following review rate the film they watched on a scale from 1 to 10? Return your estimate in json format with "analysis" and "ratings" sections.
 """
+
+
+CHAIN_OF_THOUGHT_WITH_LIKELIHOOD_TO_REWATCH = f"""{FILM_REVIEW_TIPS}
+
+Q: On a scale from 1 (least likely) to 10 (most likely), how likely is the author to choose to watch the film again? Return your estimate in json format with "analysis" and "likelihood to watch again" sections.
+
+```
+{EXAMPLE_REVIEW_001}
+```
+A:
+{{
+  "analysis": "The author of the film review expresses praise of film's writing, characters, and music. The author found the characters realistic and the plot engaging, and they recommend seeing the movie.",
+  "likelihood to watch again": 10
+}}
+
+
+Q: On a scale from 1 (least likely) to 10 (most likely), how likely is the author to choose to watch the film again? Return your estimate in json format with "analysis" and "likelihood to watch again" sections.
+```
+{EXAMPLE_REVIEW_002}
+```
+A: 
+{{
+  "analysis": "Although the author appreciated the start of the film, they criticized the film's shallow characters, unrealistic scenes, and vapid plot. The author found the screenplay disappointing and pointed out specific examples of poor writing and cinematography.",
+  "likelihood to watch again": 4
+}}
+
+Q: On a scale from 1 (least likely) to 10 (most likely), how likely is the author to choose to watch the film again? Return your estimate in json format with "analysis" and "likelihood to watch again" sections.
+```
+{EXAMPLE_REVIEW_003}
+```
+A: 
+{{
+  "analysis": "Even though the author pointed out the film's poor writing, acting, and predictable plot, they enjoyed the film for its campy, absurd qualities. The author found the movie entertaining for precisely these flaws and would watch it again with friends for a laugh.",
+  "rating": 10
+}}
+
+Q: On a scale from 1 (least likely) to 10 (most likely), how likely is the author to choose to watch the film again? Return your estimate in json format with "analysis" and "likelihood to watch again" sections.
+"""
+
