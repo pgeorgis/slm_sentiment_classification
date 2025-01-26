@@ -64,20 +64,21 @@ def load_embedding_index(file_path: str) -> dict:
 # Load default sentence embedding model
 EMBEDDING_MODEL = get_embedding_model("all-MiniLM-L6-v2")
 
-# Load IMDB train set
-imdb_train_data = load_imdb("train")
+if __name__ == "__main__":
+    # Load IMDB train set
+    imdb_train_data = load_imdb("train")
 
-# Extract tuples (index, review text) from train set
-texts_with_ids = [
-    (row[IMDB_INDEX_FIELD], row[IMDB_REVIEW_TEXT_FIELD])
-    for _, row in imdb_train_data.iterrows()
-]
+    # Extract tuples (index, review text) from train set
+    texts_with_ids = [
+        (row[IMDB_INDEX_FIELD], row[IMDB_REVIEW_TEXT_FIELD])
+        for _, row in imdb_train_data.iterrows()
+    ]
 
-# Create IMDB embedding index
-imdb_embedding_index = create_embedding_index(EMBEDDING_MODEL, texts_with_ids)
+    # Create IMDB embedding index
+    imdb_embedding_index = create_embedding_index(EMBEDDING_MODEL, texts_with_ids)
 
-# Write embedding index to pickle file
-embedding_dir = "embedding"
-os.makedirs(embedding_dir, exist_ok=True)
-embedding_index_file = os.path.join(embedding_dir, "imdb_embedding_index.pkl")
-save_embedding_index(imdb_embedding_index, embedding_index_file)
+    # Write embedding index to pickle file
+    embedding_dir = "embedding"
+    os.makedirs(embedding_dir, exist_ok=True)
+    embedding_index_file = os.path.join(embedding_dir, "imdb_embedding_index.pkl")
+    save_embedding_index(imdb_embedding_index, embedding_index_file)
