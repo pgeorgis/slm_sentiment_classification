@@ -3,4 +3,5 @@ llama-cpp-python==0.3.5
 matplotlib==3.10.0
 pandas==2.2.3
 seaborn==0.13.2
+sentence-transformers==3.4.0
 scikit-learn==1.6.0
