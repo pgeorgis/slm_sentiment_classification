@@ -68,9 +68,6 @@ setup:install_dependencies:
   cache:
     - <<: *venv-cache
       policy: pull-push
-  rules:
-    - changes:
-      - requirements.txt
 
 setup:download_slm:
   stage: setup
@@ -83,10 +80,6 @@ setup:download_slm:
     - <<: *venv-cache
     - <<: *llm-cache
       policy: pull-push
-  rules:
-    - changes:
-        - constants.py
-        - requirements.txt
 
 test:
   stage: test
