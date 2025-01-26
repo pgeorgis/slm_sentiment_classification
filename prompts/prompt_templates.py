@@ -44,16 +44,18 @@ def fewshot_review_classification(review_text: str,
             example_pool=example_pool,
             n_examples=n_examples,
         )
+    
+    # Initialize prompt text
+    prompt = ""
 
-    # Start by introducing examples
-    prompt = f"Carefully study the following {n_examples * 2} examples of film reviews with their respective classifications as either positive or negative.\n\n"
+    # Add examples
     for i, example in enumerate(selected_positive_examples):
-        prompt += f"""*** Example film review #{i + 1} ***\n```\n{example}\n```\nClassification: "positive"\n\n"""
+        prompt += f"""\nFilm Review:\n```\n{example}\n```\nSentiment: positive\n\n"""
     for j, example in enumerate(selected_negative_examples):
-        prompt += f"""*** Example film review #{i + j + 2} ***\n```\n{example}\n```\nClassification: "negative"\n\n"""
+        prompt += f"""\nFilm Review:```\n{example}\n```\nSentiment: negative\n\n"""
 
-    # Add zero-shot prompt instructions
-    prompt += zeroshot_review_classification(review_text)
+    # Add current review to classify
+    prompt += f"\nFilm Review:```\n{review_text}\n```Sentiment: "
 
     return prompt
 
