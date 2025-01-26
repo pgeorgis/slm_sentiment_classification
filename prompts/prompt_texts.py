@@ -60,7 +60,7 @@ Q: Is the overall sentiment of the following film review positive or negative?
 
 CHAIN_OF_THOUGHT_WITH_NUMERIC_RATINGS_BASE = f"""{FILM_REVIEW_TIPS}
 
-Q: How would the author of the following review rate the film they watched on a scale from 1 to 10?Return your estimate in json format with "analysis" and "ratings" sections.
+Q: How would the author of the following review rate the film they watched on a scale from 1 to 10? Return your estimate in json format with "analysis" and "ratings" sections.
 
 ```
 {EXAMPLE_REVIEW_001}
