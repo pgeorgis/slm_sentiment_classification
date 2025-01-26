@@ -17,14 +17,12 @@ from eval import (BINARY_LABEL_MAP, binary_eval,
                   create_tfpn_histogram_by_wordcount, plot_confusion_matrix,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
+from prompts.prompt_methods import (FEWSHOT_PROMPT_METHODS, PROMPT_METHODS,
+                                    QUANTITATIVE_PROMPT_METHODS)
 from prompts.prompt_templates import (
-    chain_of_thought_instructions_prompt, chain_of_thought_traditional_prompt,
     chain_of_thought_with_likelihood_to_rewatch_prompt,
-    chain_of_thought_with_numeric_ratings_prompt, extract_key_phrases_prompt,
-    fewshot_review_classification,
-    fewshot_review_classification_with_similar_examples,
-    keyword_sentiment_analysis_prompt, rating_based_sentiment_analysis_prompt,
-    zeroshot_review_classification)
+    extract_key_phrases_prompt, keyword_sentiment_analysis_prompt,
+    rating_based_sentiment_analysis_prompt)
 from prompts.system_messages import (FILM_REVIEW_CLASSIFIER,
                                      FILM_REVIEW_SUMMARIZER)
 from query_slm import Prompt, query_slm
@@ -32,18 +30,6 @@ from utils import create_datestamp, create_timestamp
 
 VALID_REVIEW_LABELS = {"positive", "negative"}
 VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
-
-PROMPT_METHODS = {
-    "zeroshot": zeroshot_review_classification,
-    "fewshot": fewshot_review_classification,
-    "fewshot-with-most-similar-examples": fewshot_review_classification_with_similar_examples,
-    "chain-of-thought-instructions": chain_of_thought_instructions_prompt,
-    "chain-of-thought-traditional": chain_of_thought_traditional_prompt,
-    "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
-    "chain-of-thought-rewatch-likelihood": chain_of_thought_with_likelihood_to_rewatch_prompt,
-    "rating-based_sentiment-analysis": rating_based_sentiment_analysis_prompt,
-    "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
-}
 
 
 def create_run_outdir(test_label=None):
@@ -89,17 +75,17 @@ def extract_rating_from_json(prediction_json: str):
     """
     Extracts the rating value from a JSON string.
 
-    This function takes a JSON string, removes any leading or trailing 
-    markdown code block delimiters (```json and ```), parses the string 
-    into a dictionary, and then attempts to extract the value associated 
+    This function takes a JSON string, removes any leading or trailing
+    markdown code block delimiters (```json and ```), parses the string
+    into a dictionary, and then attempts to extract the value associated
     with the keys "rating" or "ratings".
 
     Args:
-        prediction_json (str): A JSON string potentially containing a 
+        prediction_json (str): A JSON string potentially containing a
                                "rating" or "ratings" key.
 
     Returns:
-        int or float or None: The value associated with the "rating" or 
+        int or float or None: The value associated with the "rating" or
                               "ratings" key if found, otherwise None.
     """
     prediction_json = re.sub(r'\n', r' ', prediction_json, re.DOTALL)
@@ -136,6 +122,48 @@ def postprocess_predicted_rating(predicted_rating: str, from_json=False, positiv
         return None, None
 
 
+def quantitative_sentiment_classification(prompt: Prompt,
+                                          n_calls: int = 3,
+                                          temperature: float = 0.4,
+                                          ):
+    """Handle quantitative prompting methods for sentiment analysis."""
+    # Determine whether numeric estimate should be extracted from raw text or from json
+    if prompt.template == rating_based_sentiment_analysis_prompt:
+        from_json = False
+    else:
+        from_json = True
+
+    # Make N calls and aggregate numeric estimates
+    ratings = []
+    details = defaultdict(lambda: 0)
+    for i in range(n_calls):
+        rating_model_params = {"temperature": temperature}
+        prediction, details_i = query_slm(model, prompt, **rating_model_params)
+        prediction, rating = postprocess_predicted_rating(str(prediction), from_json=from_json)
+        if rating is not None:
+            ratings.append(rating)
+        # Get token usage and latency from each call
+        for field in details_i:
+            if field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
+                details[field] += details_i[field]
+            else:
+                details[field] = details_i[field]
+    # Get average of token usage and latency
+    for field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
+        details[field] /= n_calls
+    if len(ratings) > 0:
+        rating = mean(ratings)
+        prediction = binary_classify_rating(rating)
+    else:
+        rating, prediction = None, None
+    if prompt.template == chain_of_thought_with_likelihood_to_rewatch_prompt:
+        likelihood_to_rewatch = rating
+        rating = None
+    else:
+        likelihood_to_rewatch = None
+    return prediction, rating, likelihood_to_rewatch, details
+
+
 def classify_imdb_review(review_text: str,
                          model: Llama,
                          prompt_template: Union[Callable, str],
@@ -144,68 +172,50 @@ def classify_imdb_review(review_text: str,
                          system_message: str = FILM_REVIEW_CLASSIFIER,
                          model_params: dict = None):
     """Classify an IMDB review as a 'positive' or 'negative' review."""
+
+    # Initialize Prompt object
     prompt = Prompt(
         prompt_template,
         system_message=system_message,
         prompt_id=prompt_label,
     )
+
+    # Initialize additional details dictionary
+    additional_details = defaultdict(lambda: None)
+
     # Check if using keyword-based sentiment analysis; if so, first extract keywords
     use_keywords = prompt_template == keyword_sentiment_analysis_prompt
     if use_keywords:
         key_phrases, key_phrases_call_details = extract_review_keywords(review_text)
         prompt.generate_prompt(key_phrases=key_phrases)
-    elif prompt_template in {
-        fewshot_review_classification,
-        fewshot_review_classification_with_similar_examples
-    }:
+        additional_details["key_phrases"] = key_phrases
+
+    # Fewshot methods: explicitly specify example pool and N examples
+    elif prompt_template in FEWSHOT_PROMPT_METHODS:
         prompt.generate_prompt(
             review_text=review_text,
             example_pool=example_pool,
             n_examples=FEWSHOT_EXAMPLE_N
         )
+
+    # Other methods: standard prompt generation
     else:
         prompt.generate_prompt(review_text=review_text)
+
+    # Initialize model parameters
     if not model_params:
         model_params = {}
-    if prompt_template in {
-        rating_based_sentiment_analysis_prompt,
-        chain_of_thought_with_numeric_ratings_prompt,
-        chain_of_thought_with_likelihood_to_rewatch_prompt,
-    }:
-        if prompt_template == rating_based_sentiment_analysis_prompt:
-            from_json = False
-        else:
-            from_json = True
-        ratings = []
-        n_calls = 3
-        details = defaultdict(lambda: 0)
-        for i in range(n_calls):
-            rating_model_params = {"temperature": 0.4}
-            prediction, details_i = query_slm(model, prompt, **rating_model_params)
-            prediction, rating = postprocess_predicted_rating(str(prediction), from_json=from_json)
-            if rating is not None:
-                ratings.append(rating)
-            # Get token usage and latency from each call
-            for field in details_i:
-                if field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
-                    details[field] += details_i[field]
-                else:
-                    details[field] = details_i[field]
-        # Get average of token usage and latency
-        for field in {"prompt_tokens", "completion_tokens", "total_tokens", "latency"}:
-            details[field] /= n_calls
-        if len(ratings) > 0:
-            rating = mean(ratings)
-            prediction = binary_classify_rating(rating)
-        else:
-            rating, prediction = None, None
-        if prompt_template == chain_of_thought_with_likelihood_to_rewatch_prompt:
-            likelihood_to_rewatch = rating
-            rating = None
-        else:
-            likelihood_to_rewatch = None
+
+    # Handle sentiment analysis methods using quantitative/numeric estimates
+    if prompt_template in QUANTITATIVE_PROMPT_METHODS:
+        prediction, rating, likelihood_to_rewatch, details = quantitative_sentiment_classification(
+            prompt_template=prompt_template
+        )
+        additional_details["rating"] = rating
+        additional_details["likelihood_to_rewatch"] = likelihood_to_rewatch
+
+    # Non-quantitative sentiment analysis methods
     else:
-        rating, likelihood_to_rewatch = None, None
         prediction, details = query_slm(model, prompt, **model_params)
         prediction = prediction.strip().lower()
         match_prediction = VALID_REVIEW_REGEX.search(prediction)
@@ -222,18 +232,6 @@ def classify_imdb_review(review_text: str,
         details["latency"] += key_phrases_call_details["latency"]
         for key in {"prompt_tokens", "completion_tokens", "total_tokens"}:
             details["usage"][key] += key_phrases_call_details["usage"][key]
-    else:
-        key_phrases = None
-    
-    # Assemble additional details:
-    # - key phrases
-    # - review ratings
-    # - likelihood to rewatch
-    additional_details = {
-        "key_phrases": key_phrases,
-        "rating": rating,
-        "likelihood_to_rewatch": likelihood_to_rewatch,
-    }
 
     return prediction, details, additional_details
 
@@ -282,7 +280,7 @@ def test_prompt(test_data: pd.DataFrame,
     test_data[pred_label] = predictions
     result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
-    
+
     # Add additional details to dataframe in separate columns
     for detail_field, values in additional_details_lists.items():
         test_data[f"{detail_field}-{model.name}"] = values
