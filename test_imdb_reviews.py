@@ -18,7 +18,7 @@ from eval import (BINARY_LABEL_MAP, binary_eval,
                   plot_f1_bar_graph, plot_f1_latency_scatterplot)
 from load_imdb_data import load_imdb, sample_from_imdb
 from prompts.prompt_templates import (
-    chain_of_thought_prompt, chain_of_thought_v2_prompt,
+    chain_of_thought_instructions_prompt, chain_of_thought_traditional_prompt,
     chain_of_thought_with_likelihood_to_rewatch_prompt,
     chain_of_thought_with_numeric_ratings_prompt, extract_key_phrases_prompt,
     fewshot_review_classification,
@@ -36,13 +36,13 @@ VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
 PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
     "fewshot": fewshot_review_classification,
-    "fewshot_by_similarity": fewshot_review_classification_with_similar_examples,
-    "chain-of-thought": chain_of_thought_prompt,
-    "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
-    "chain-of-thought-v2": chain_of_thought_v2_prompt,
+    "fewshot-with-most-similar-examples": fewshot_review_classification_with_similar_examples,
+    "chain-of-thought-instructions": chain_of_thought_instructions_prompt,
+    "chain-of-thought-traditional": chain_of_thought_traditional_prompt,
     "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
     "chain-of-thought-rewatch-likelihood": chain_of_thought_with_likelihood_to_rewatch_prompt,
-    "rating-based-sentiment-analysis": rating_based_sentiment_analysis_prompt,
+    "rating-based_sentiment-analysis": rating_based_sentiment_analysis_prompt,
+    "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
 
 

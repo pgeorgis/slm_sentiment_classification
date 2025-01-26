@@ -3,18 +3,6 @@
 from prompts.prompt_examples import (EXAMPLE_REVIEW_001, EXAMPLE_REVIEW_002,
                                      EXAMPLE_REVIEW_003)
 
-RETURN_FORMAT = """Return only the labels "positive" or "negative". No further explanation is needed."""
-
-ZEROSHOT_PROMPT_BASE = f"""Carefully read the following film review and decide whether the overall review is positive or negative.
-{RETURN_FORMAT}"""
-
-CHAIN_OF_THOUGHT_PROMPT_BASE = f"""Carefully read the following film review and decide whether the overall review is positive or negative.
-Let's think step-by-step:
-- Identify the key words or phrases which reveal the author's attitude toward the film.
-- Determine whether these attitudes are generally positive (e.g. impressed, pleased, moved, excited) or generally negative (e.g. bored, disgusted, disappointed, confused).
-- Confirm that this positive or negative sentiment matches the overall tone of the review.
-{RETURN_FORMAT}"""
-
 FILM_REVIEW_TIPS = """Consider the following when analyzing film reviews:
 - What emotions does the author express toward the film? For example, is the author impressed, pleased, moved, or excited (positive emotions)? Or is the author bored, disgusted, disappointed, or confused (negative emotions)?
 - Consider the author's description of the film's writing, plot, acting, cinematography, and other elements. Does the author praise or criticize these aspects? How does this contribute to the overall sentiment of the review?
@@ -24,7 +12,19 @@ FILM_REVIEW_TIPS = """Consider the following when analyzing film reviews:
 - Does the author mention an explicit star rating out of 10? Ratings >5 are positive and <5 are negative.
 """
 
-CHAIN_OF_THOUGHT_V2_PROMPT_BASE = f"""{FILM_REVIEW_TIPS}
+RETURN_FORMAT = """Return only the labels "positive" or "negative". No further explanation is needed."""
+
+ZEROSHOT_PROMPT_BASE = f"""Carefully read the following film review and decide whether the overall review is positive or negative.
+{RETURN_FORMAT}"""
+
+CHAIN_OF_THOUGHT_INSTRUCTIONS_BASE = f"""Carefully read the following film review and decide whether the overall review is positive or negative.
+Let's think step-by-step:
+- Identify the key words or phrases which reveal the author's attitude toward the film.
+- Determine whether these attitudes are generally positive (e.g. impressed, pleased, moved, excited) or generally negative (e.g. bored, disgusted, disappointed, confused).
+- Confirm that this positive or negative sentiment matches the overall tone of the review.
+{RETURN_FORMAT}"""
+
+CHAIN_OF_THOUGHT_TRADITIONAL_BASE = f"""{FILM_REVIEW_TIPS}
 
 Q: Is the overall sentiment of the following film review positive or negative?
 
