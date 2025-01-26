@@ -5,8 +5,8 @@ from pandas import DataFrame
 from prompts.prompt_examples import (
     select_positive_and_negative_examples,
     select_positive_and_negative_reviews_by_embedding_similarity)
-from prompts.prompt_texts import (CHAIN_OF_THOUGHT_PROMPT_BASE,
-                                  CHAIN_OF_THOUGHT_V2_PROMPT_BASE,
+from prompts.prompt_texts import (CHAIN_OF_THOUGHT_INSTRUCTIONS_BASE,
+                                  CHAIN_OF_THOUGHT_TRADITIONAL_BASE,
                                   CHAIN_OF_THOUGHT_WITH_LIKELIHOOD_TO_REWATCH,
                                   CHAIN_OF_THOUGHT_WITH_NUMERIC_RATINGS_BASE,
                                   RETURN_FORMAT, ZEROSHOT_PROMPT_BASE)
@@ -76,7 +76,7 @@ def fewshot_review_classification_with_similar_examples(review_text: str,
 
 def chain_of_thought_instructions_prompt(review_text: str):
     """Assembles an instruction-based chain-of-thought style prompt for film review binary classification."""
-    prompt = f"""{CHAIN_OF_THOUGHT_PROMPT_BASE}
+    prompt = f"""{CHAIN_OF_THOUGHT_INSTRUCTIONS_BASE}
 
 ```
 {review_text}
@@ -86,7 +86,7 @@ def chain_of_thought_instructions_prompt(review_text: str):
 
 def chain_of_thought_traditional_prompt(review_text: str):
     """Assembles a traditional chain-of-thought style prompt for film review binary classification."""
-    prompt = f"""{CHAIN_OF_THOUGHT_V2_PROMPT_BASE}
+    prompt = f"""{CHAIN_OF_THOUGHT_TRADITIONAL_BASE}
 
 ```
 {review_text}
