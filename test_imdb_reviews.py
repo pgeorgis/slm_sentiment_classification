@@ -1,4 +1,5 @@
 import argparse
+import copy
 import glob
 import os
 import re
@@ -289,16 +290,17 @@ def test_prompt(test_data: pd.DataFrame,
 
     # Drop any test data rows with empty/invalid predictions
     start_size = len(test_data)
-    test_data = test_data.dropna()
-    end_size = len(test_data)
+    scorable_test_data = copy.deepcopy(test_data)
+    scorable_test_data = scorable_test_data.dropna()
+    end_size = len(scorable_test_data)
     if end_size < start_size:
         logger.warning(f"Dropped {start_size - end_size} rows with invalid predictions")
 
     # Get dictionary of counts of TP, FP, TN, FN
-    results = test_data[result_label].value_counts().to_dict()
+    results = scorable_test_data[result_label].value_counts().to_dict()
 
     # Calculate F1 score
-    f1_score = calculate_f1(test_data[IMDB_REVIEW_LABEL_FIELD], test_data[pred_label])
+    f1_score = calculate_f1(scorable_test_data[IMDB_REVIEW_LABEL_FIELD], scorable_test_data[pred_label])
 
     return results, f1_score, call_details, test_data
 
