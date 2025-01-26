@@ -199,8 +199,13 @@ def classify_imdb_review(review_text: str,
             prediction = binary_classify_rating(rating)
         else:
             rating, prediction = None, None
+        if prompt_template == chain_of_thought_with_likelihood_to_rewatch_prompt:
+            likelihood_to_rewatch = rating
+            rating = None
+        else:
+            likelihood_to_rewatch = None
     else:
-        rating = None
+        rating, likelihood_to_rewatch = None, None
         prediction, details = query_slm(model, prompt, **model_params)
         prediction = prediction.strip().lower()
         match_prediction = VALID_REVIEW_REGEX.search(prediction)
@@ -219,8 +224,18 @@ def classify_imdb_review(review_text: str,
             details["usage"][key] += key_phrases_call_details["usage"][key]
     else:
         key_phrases = None
+    
+    # Assemble additional details:
+    # - key phrases
+    # - review ratings
+    # - likelihood to rewatch
+    additional_details = {
+        "key_phrases": key_phrases,
+        "rating": rating,
+        "likelihood_to_rewatch": likelihood_to_rewatch,
+    }
 
-    return prediction, details, key_phrases, rating
+    return prediction, details, additional_details
 
 
 def test_prompt(test_data: pd.DataFrame,
@@ -237,10 +252,9 @@ def test_prompt(test_data: pd.DataFrame,
     result_values = []
     call_details = []
     predictions = []
-    key_phrases_list = []
-    ratings = []
+    additional_details_lists = defaultdict(lambda: [])
     for _, row in test_data.iterrows():
-        prediction, details, key_phrases, rating = classify_imdb_review(
+        prediction, details, additional_details = classify_imdb_review(
             review_text=row[IMDB_REVIEW_TEXT_FIELD],
             model=model,
             prompt_template=prompt_template,
@@ -250,9 +264,9 @@ def test_prompt(test_data: pd.DataFrame,
         )
         predictions.append(prediction)
         call_details.append(details)
-        if key_phrases:
-            key_phrases_list.append(key_phrases)
-        ratings.append(rating)
+        for detail_field, value in additional_details.items():
+            if value is not None:
+                additional_details_lists[detail_field].append(value)
         # Evaluate binary classification as true/false positive/negative
         if prediction is not None:
             binary_eval_result = binary_eval(
@@ -268,14 +282,10 @@ def test_prompt(test_data: pd.DataFrame,
     test_data[pred_label] = predictions
     result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
-
-    # Check if keywords are available, if so add to dataframe in separate column
-    if len(key_phrases_list) > 0 and key_phrases_list[0] is not None:
-        test_data[f"key_phrases_{model.name}"] = key_phrases_list
     
-    # Check if ratings are available, if so add to dataframe in separate column
-    if len(ratings) > 0 and ratings[0] is not None:
-        test_data[f"rating_{model.name}"] = ratings
+    # Add additional details to dataframe in separate columns
+    for detail_field, values in additional_details_lists.items():
+        test_data[f"{detail_field}-{model.name}"] = values
 
     # Drop any test data rows with empty/invalid predictions
     start_size = len(test_data)
