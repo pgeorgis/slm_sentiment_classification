@@ -46,15 +46,16 @@ def load_imdb(split: str = "train"):
     # Instead use 1 as positive and 0 as negative as this is more intuitive
     df[IMDB_REVIEW_LABEL_FIELD] = df[IMDB_REVIEW_LABEL_FIELD].apply(reverse_binary_label)
 
+    # Add indices
+    df[IMDB_INDEX_FIELD] = range(len(df))
+
     return df
 
 
 def sample_from_imdb(imdb_df: pd.DataFrame, min_examples_per_class: int = 100):
     """Sample equally from IMDB dataset by label and proportionately by text length."""
     min_examples_per_class = min(min_examples_per_class, len(imdb_df))
-    # Add indices
     selected_indices = {0: set(), 1: set()}
-    imdb_df[IMDB_INDEX_FIELD] = range(len(imdb_df))
 
     # Calculate text lengths and sort into brackets
     imdb_df["wordcount"] = imdb_df[IMDB_REVIEW_TEXT_FIELD].apply(get_wordcount)
