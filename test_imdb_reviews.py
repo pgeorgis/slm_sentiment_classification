@@ -32,7 +32,7 @@ from utils import create_datestamp, create_timestamp
 
 VALID_REVIEW_LABELS = {"positive", "negative"}
 VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
-
+PREDICTION_PREFIX = "prediction_"
 
 def create_run_outdir(test_label=None):
     """Create an output directory for a single test run."""
@@ -278,7 +278,7 @@ def test_prompt(test_data: pd.DataFrame,
         result_values.append(binary_eval_result)
 
     # Add predictions and T/F P/N results to test dataframe
-    pred_label = "prediction_" + prompt_label
+    pred_label = PREDICTION_PREFIX + prompt_label
     test_data[pred_label] = predictions
     result_label = "_".join([model.name, prompt_label])
     test_data[result_label] = result_values
@@ -432,6 +432,13 @@ if __name__ == "__main__":
     intermediate_outfiles = glob.glob(os.path.join(run_outdir, "intermediate*"))
     for intermediate_file in intermediate_outfiles:
         os.remove(intermediate_file)
+    
+    # Drop NaN prediction entries from test results and create plots
+    prediction_columns = [
+        col for col in imdb_test_sample.columns
+        if col.startswith(PREDICTION_PREFIX)
+    ]
+    imdb_test_sample = imdb_test_sample.dropna(subset=prediction_columns)
 
     # Visualize results
     plot_outdir = os.path.join(run_outdir, "plots")
