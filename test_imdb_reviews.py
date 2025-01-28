@@ -266,8 +266,7 @@ def test_prompt(test_data: pd.DataFrame,
         predictions.append(prediction)
         call_details.append(details)
         for detail_field, value in additional_details.items():
-            if value is not None:
-                additional_details_lists[detail_field].append(value)
+            additional_details_lists[detail_field].append(value)
         # Evaluate binary classification as true/false positive/negative
         if prediction is not None:
             binary_eval_result = binary_eval(
@@ -286,7 +285,8 @@ def test_prompt(test_data: pd.DataFrame,
 
     # Add additional details to dataframe in separate columns
     for detail_field, values in additional_details_lists.items():
-        test_data[f"{detail_field}-{model.name}"] = values
+        if any(v is not None for v in values):
+            test_data[f"{detail_field}-{model.name}"] = values
 
     # Drop any test data rows with empty/invalid predictions
     start_size = len(test_data)
