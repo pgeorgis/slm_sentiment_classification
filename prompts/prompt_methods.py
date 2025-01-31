@@ -15,7 +15,7 @@ PROMPT_METHODS = {
     "chain-of-thought-traditional": chain_of_thought_traditional_prompt,
     "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
     "chain-of-thought-rewatch-likelihood": chain_of_thought_with_likelihood_to_rewatch_prompt,
-    "rating-based_sentiment-analysis": rating_based_sentiment_analysis_prompt,
+    "zeroshot-numeric-rating-sentiment-analysis": rating_based_sentiment_analysis_prompt,
     "keyword-based_sentiment_analysis": keyword_sentiment_analysis_prompt,
 }
 
