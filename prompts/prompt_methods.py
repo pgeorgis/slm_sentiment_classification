@@ -10,7 +10,7 @@ from prompts.prompt_templates import (
 PROMPT_METHODS = {
     "zeroshot": zeroshot_review_classification,
     "fewshot": fewshot_review_classification,
-    "fewshot-with-most-similar-examples": fewshot_review_classification_with_similar_examples,
+    "dynamic-fewshot": fewshot_review_classification_with_similar_examples,
     "chain-of-thought-instructions": chain_of_thought_instructions_prompt,
     "chain-of-thought-traditional": chain_of_thought_traditional_prompt,
     "chain-of-thought-with-numeric-rating": chain_of_thought_with_numeric_ratings_prompt,
