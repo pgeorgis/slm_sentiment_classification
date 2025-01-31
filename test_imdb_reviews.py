@@ -75,13 +75,7 @@ def binary_classify_rating(rating: int, positive_threshold: int = 5):
 
 
 def extract_rating_from_json(prediction_json: str):
-    """
-    Extracts the rating value from a JSON string.
-
-    This function takes a JSON string, removes any leading or trailing
-    markdown code block delimiters (```json and ```), parses the string
-    into a dictionary, and then attempts to extract the value associated
-    with the keys "rating" or "ratings".
+    """Extracts the rating value from a JSON string.
 
     Args:
         prediction_json (str): A JSON string potentially containing a
