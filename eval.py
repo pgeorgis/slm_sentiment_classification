@@ -32,6 +32,7 @@ def create_tfpn_histogram_by_wordcount(results_df: pd.DataFrame,
                                        show_plot: bool = False,
                                        outfile: str = None):
     """Create histogram of TP/TN/FP/FN results according to word count of film review text."""
+    results_df = results_df.dropna(subset=[categorical_column])
     unique_categories = sorted(results_df[categorical_column].unique())
     plt.figure(figsize=(8, 5))
     sns.histplot(
@@ -60,6 +61,7 @@ def plot_confusion_matrix(results_df: pd.DataFrame,
                           outfile: str = None,
                           show_plot: bool = False):
     """Plot a confusion matrix."""
+    results_df = results_df.dropna(subset=[results_column])
     results = results_df[results_column].value_counts(normalize=False)
     results = results.to_dict()
     confusion_matrix = np.array(
@@ -99,8 +101,8 @@ def plot_f1_bar_graph(results_df: pd.DataFrame,
     plt.xlabel('Prompt')
     plt.ylabel('F1 Score')
     plt.ylim((0.75, 1.0))
-    plt.xticks(rotation=45, ha='right')
-    plt.legend(title='Model')
+    plt.xticks(rotation=45, ha='right', fontsize=7)
+    plt.legend(title='Model', loc='upper right')
     plt.tight_layout()
     if show_plot:
         plt.show()
