@@ -6,7 +6,7 @@ Two SLMs are tested in this experiment:
     
 - [Qwen2.5-1.5B](https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/blob/main/Qwen2.5-1.5B-Instruct-Q5_K_M.gguf) : a quantized version of Qwen2.5 with 1.5 billion parameters
 
-Four prompting techniques are tested:
+Several prompting techniques are tested:
 - Zero-shot prompting
 - Few-shot prompting
 - Chain-of-thought prompting
@@ -14,6 +14,14 @@ Four prompting techniques are tested:
 
 Please see [analysis/study_summary.pdf](analysis/study_summary.pdf) for a full write-up on the experiments and detailed explanation about each of these prompt structures.
 
+The extension to the initial study presents five more prompts and prompting techniques:
+- Few-shot prompting with dynamically retrieved most similar examples
+- Chain-of-Thought prompting (more traditional implementation)
+- Zero-shot quantitative review rating estimation
+- Chain-of-Thought quantitative review rating estimation
+- Chain-of-Thought quantitative estimation of rewatch likelihood
+
+Please see [analysis/extended_study.pdf](analysis/extended_study.pdf) for the full write-up of the extended study and new prompt structures.
 
 ## Installation
 
