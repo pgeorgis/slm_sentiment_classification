@@ -38,13 +38,13 @@ def create_faiss_index(embeddings: np.ndarray, ids: list):
     # Create a FAISS index
     d = embeddings.shape[1]  # Dimensionality of embeddings
     index = faiss.IndexFlatL2(d)  # L2 distance (Euclidean)
-    
+
     # Add embeddings to the index
     index.add(embeddings)
-    
+
     # Map FAISS internal indices to original IDs
     id_map = {i: ids[i] for i in range(len(ids))}
-    
+
     return index, id_map
 
 
@@ -95,7 +95,7 @@ def retrieve_most_similar_texts(query_text: str,
                 valid_indices_map[idx] = original_id
                 valid_indices.append(faiss_index)
                 idx += 1
-        
+
         # Convert to numpy array for FAISS indexing
         valid_embeddings = index.reconstruct_n(0, index.ntotal)[valid_indices]
 
@@ -116,7 +116,7 @@ def retrieve_most_similar_texts(query_text: str,
     results = [
         (index_map[idx], 1 / (1 + dist))
         for idx, dist in zip(indices[0], distances[0])
-        if idx != -1 #and (valid_ids is None or id_map[idx] in valid_ids)
+        if idx != -1
     ]
     return results
 

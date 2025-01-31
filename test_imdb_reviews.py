@@ -34,6 +34,7 @@ VALID_REVIEW_LABELS = {"positive", "negative"}
 VALID_REVIEW_REGEX = re.compile("|".join(VALID_REVIEW_LABELS))
 PREDICTION_PREFIX = "prediction_"
 
+
 def create_run_outdir(test_label=None):
     """Create an output directory for a single test run."""
     today = create_datestamp()
@@ -98,16 +99,19 @@ def extract_rating_from_json(prediction_json: str):
     return None
 
 
-def postprocess_predicted_rating(predicted_rating: str, from_json=False, positive_threshold: int = 5) -> str|None:
+def postprocess_predicted_rating(predicted_rating: str,
+                                 from_json=False,
+                                 positive_threshold: int = 5) -> str | None:
     """Postprocess a predicted rating to classify as 'positive' or 'negative'.
 
     Args:
-        predicted_rating (str): Predicted rating of the film review on a scale from 1 to 10.
-        from_json (bool, optional): Whether to extract the predicted rating from a json object or from raw text.
+        predicted_rating (str): Predicted rating of the film review on 1-10 scale.
+        from_json (bool, optional): Extract predicted rating from a json object (vs. from raw text).
         positive_threshold (int, optional): Threshold for positive rating. Defaults to 5.
 
     Returns:
-        str|None: 'positive' or 'negative' classification of the review. None is returned if no numeric rating is found.
+        str|None:   'positive' or 'negative' classification of the review.
+                    None is returned if no numeric rating is found.
     """
     if from_json:
         match_rating = extract_rating_from_json(predicted_rating)
@@ -300,7 +304,10 @@ def test_prompt(test_data: pd.DataFrame,
     results = scorable_test_data[result_label].value_counts().to_dict()
 
     # Calculate F1 score
-    f1_score = calculate_f1(scorable_test_data[IMDB_REVIEW_LABEL_FIELD], scorable_test_data[pred_label])
+    f1_score = calculate_f1(
+        scorable_test_data[IMDB_REVIEW_LABEL_FIELD],
+        scorable_test_data[pred_label]
+    )
 
     return results, f1_score, call_details, test_data
 
@@ -432,7 +439,7 @@ if __name__ == "__main__":
     intermediate_outfiles = glob.glob(os.path.join(run_outdir, "intermediate*"))
     for intermediate_file in intermediate_outfiles:
         os.remove(intermediate_file)
-    
+
     # Drop NaN prediction entries from test results and create plots
     prediction_columns = [
         col for col in imdb_test_sample.columns
