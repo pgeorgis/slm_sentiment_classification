@@ -101,8 +101,8 @@ def plot_f1_bar_graph(results_df: pd.DataFrame,
     plt.xlabel('Prompt')
     plt.ylabel('F1 Score')
     plt.ylim((0.75, 1.0))
-    plt.xticks(rotation=45, ha='right')
-    plt.legend(title='Model')
+    plt.xticks(rotation=45, ha='right', fontsize=7)
+    plt.legend(title='Model', loc='upper right')
     plt.tight_layout()
     if show_plot:
         plt.show()
